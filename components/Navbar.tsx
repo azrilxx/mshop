@@ -63,10 +63,15 @@ export default function Navbar({ user }: NavbarProps) {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
-              <div className="absolute top-full left-0 w-48 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 mt-2">
+              <div className="absolute top-full left-0 w-64 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 mt-2">
                 <div className="py-2">
-                  <Link href="/shop?category=electronics" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Electronics</Link>
-                  <Link href="/shop?category=fashion" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Fashion</Link>
+                  <Link href="/shop?category=Flanges" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Flanges</Link>
+                  <Link href="/shop?category=Rope Access Equipment" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Rope Access Equipment</Link>
+                  <Link href="/shop?category=Subsea Connectors" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Subsea Connectors</Link>
+                  <Link href="/shop?category=Pipe Cleaning Tools" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Pipe Cleaning Tools</Link>
+                  <Link href="/shop?category=Pressure Testing Units" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Pressure Testing Units</Link>
+                  <Link href="/shop?category=Rental Tanks" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Rental Tanks</Link>
+                  <Link href="/shop?category=Measurement & Instrumentation" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Measurement & Instrumentation</Link>
                   <Link href="/shop?category=home" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Home & Garden</Link>
                   <Link href="/shop?category=sports" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Sports</Link>
                 </div>

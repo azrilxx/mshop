@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { OIL_GAS_CATEGORIES } from '@/lib/constants/categories'
 
 export default function CreateProductPage() {
   const [formData, setFormData] = useState({
@@ -112,12 +113,13 @@ export default function CreateProductPage() {
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   >
                     <option value="">Select a category</option>
-                    <option value="electronics">Electronics</option>
-                    <option value="clothing">Clothing</option>
-                    <option value="books">Books</option>
-                    <option value="home">Home & Garden</option>
-                    <option value="sports">Sports & Outdoors</option>
-                    <option value="other">Other</option>
+                    <option value="Flanges">Flanges</option>
+                    <option value="Rope Access Equipment">Rope Access Equipment</option>
+                    <option value="Subsea Connectors">Subsea Connectors</option>
+                    <option value="Pipe Cleaning Tools">Pipe Cleaning Tools</option>
+                    <option value="Pressure Testing Units">Pressure Testing Units</option>
+                    <option value="Rental Tanks">Rental Tanks</option>
+                    <option value="Measurement & Instrumentation">Measurement & Instrumentation</option>
                   </select>
                 </div>
 

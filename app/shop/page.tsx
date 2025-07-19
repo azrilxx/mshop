@@ -94,22 +94,25 @@ export default async function ShopPage() {
               All Categories
             </button>
             <button className="category-pill-inactive whitespace-nowrap">
-              Electronics
+              Flanges
             </button>
             <button className="category-pill-inactive whitespace-nowrap">
-              Fashion
+              Rope Access Equipment
             </button>
             <button className="category-pill-inactive whitespace-nowrap">
-              Home & Garden
+              Subsea Connectors
             </button>
             <button className="category-pill-inactive whitespace-nowrap">
-              Industrial
+              Pipe Cleaning Tools
             </button>
             <button className="category-pill-inactive whitespace-nowrap">
-              Office Supplies
+              Pressure Testing Units
             </button>
             <button className="category-pill-inactive whitespace-nowrap">
-              Sports & Recreation
+              Rental Tanks
+            </button>
+            <button className="category-pill-inactive whitespace-nowrap">
+              Measurement & Instrumentation
             </button>
           </div>
         </div>
