@@ -1,0 +1,58 @@
+/fix
+
+1. **Enforce Seller Data Namespacing**
+   - Audit all tables in Supabase (e.g. `products`, `orders`, `ads`, `shipment`)
+   - Ensure all rows are scoped by `user_id` or `shopName`
+   - Add Supabase RLS policies:
+     ```sql
+     user_id = auth.uid()
+     ```
+   - If `shopName` is used instead, verify it is stored in user metadata and indexed
+
+2. **Secure API Routes**
+   - In all API handlers (e.g. `POST /api/products`, `GET /api/orders`):
+     - Add guard clauses:
+       ```ts
+       if (session.user.id !== product.user_id) return 403
+       ```
+     - Prevent sellers from accessing others’ records
+
+3. **Protect Admin-Only Functions**
+   - Lock routes like `/admin/verify`, `/admin/category` to users with `role = 'admin'`
+   - If using Supabase roles, validate claims with:
+     ```ts
+     session.user.app_metadata.role === 'admin'
+     ```
+
+4. **Display Scoped Data in UI**
+   - Modify data-fetching logic in seller dashboard:
+     - Only fetch products/orders/ads belonging to the logged-in user
+   - Claude: use `useSession()` from Supabase client to filter queries
+
+5. **Add Domain Mode Switch (Optional)**
+   - If needed, set a `tenantDomain` variable:
+     ```ts
+     export const tenant = window.location.hostname.split('.')[0];
+     ```
+   - Claude: use this to auto-namespace shop context (optional, for vanity URLs)
+
+6. **Testing**
+   - Create test sellers A and B
+   - Confirm that:
+     - Seller A sees only A’s products
+     - Seller B cannot edit A’s orders
+     - Admin can access all seller data
+
+7. **Push Project to GitHub**
+   - Initialize Git (if not already)
+   - Connect this Replit project to GitHub via the sidebar or CLI:
+     ```sh
+     git init
+     git remote add origin https://github.com/YOUR_USERNAME/muvex-marketplace.git
+     git add .
+     git commit -m "Phase 4: Multi-tenant isolation + RLS"
+     git push -u origin main
+     ```
+   - Claude: use `replit.nix` or `.replit` if needed to configure deploy context
+
+Claude: prioritize Replit-native commands. Use Supabase auth context throughout. Ensure no cross-tenant data leaks. Scaffold default RLS policies and shared utils in `lib/tenant.ts`.
