@@ -1,0 +1,124 @@
+/fix
+
+# CONTEXT
+You are working inside the `mshop` SaaS marketplace project on Replit. The marketplace is targeted at oil & gas B2B users. Sellers can already list products. Now, we must enable a complete buyer experience layer. This is Phase 8 of the deployment plan.
+
+# GOAL
+Build a full conversion funnel for buyers. Allow RFQ submission, buyer registration, seller contact, and quote visibility. All features must use Replit DB and respect existing auth + role logic.
+
+---
+
+# FEATURES TO BUILD
+
+## 1. RFQ SUBMISSION FLOW
+- Route: `/quote/[productId]/page.tsx` already exists
+- Extend form to include:
+  - Full name, company, email, quantity, delivery region, message
+- Save RFQ under key: `rfq:{productId}:{rfqId}`
+- Model:
+```ts
+{
+  id: string;
+  buyerId: string | null;
+  name: string;
+  email: string;
+  quantity: number;
+  region: string;
+  message: string;
+  submittedAt: ISOString;
+}
+
+2. BUYER REGISTRATION FUNNEL
+
+    During registration or after login, show a setup step:
+
+        "What are you sourcing?"
+
+        Region / budget / urgency
+
+    Store under: user:{id}.sourcingPreferences
+
+3. SELLER NOTIFICATIONS
+
+    When RFQ is submitted:
+
+        If seller has WhatsApp set, open wa.me/ link on client
+
+        If email exists, send message using existing notification-service
+
+    Include product name, buyer info, and message in notification
+
+4. BUYER DASHBOARD (Lite)
+
+    Route: /dashboard/buyer
+
+    Display:
+
+        RFQs submitted
+
+        Responses (static for now)
+
+        Bookmarked products (use user:{id}.bookmarks: string[])
+
+    Add “Save for later” button on each product card
+
+5. TALK TO SELLER
+
+    On product detail page:
+
+        If seller has whatsappNumber, show “Chat on WhatsApp”
+
+        If seller has email, show mailto: link
+
+    UI must appear only for logged-out or buyer-role users
+
+6. PRODUCT RECOMMENDATIONS
+
+    Add tags: string[] to product model if missing
+
+    On each product page, show:
+
+        “You Might Also Like” section
+
+        Pull products with at least 1 tag match
+
+    Limit: 4 recommendations
+
+7. SPEC SHEET DISPLAY
+
+    Allow sellers to upload PDF spec sheets during listing
+
+        Field: specSheetUrl: string
+
+    On product page:
+
+        If exists, show "Download Spec Sheet" or embed PDF viewer
+
+DATABASE
+
+Use Replit DB only. No Supabase.
+All RFQs must be private to seller and admin.
+Only buyers can submit RFQs.
+VERIFICATION
+
+    Do not affect seller dashboard routes
+
+    Do not break existing RFQ submission
+
+    Confirm buyer-specific data is scoped to session user
+
+    Confirm notifications are only sent to seller owner
+
+    Confirm landing to RFQ experience works without error
+
+OUTPUT
+
+Return:
+
+    All new/modified files
+
+    Keys stored in DB and example shape
+
+    Buyer dashboard render state
+
+    If WhatsApp/email triggers succeeded
