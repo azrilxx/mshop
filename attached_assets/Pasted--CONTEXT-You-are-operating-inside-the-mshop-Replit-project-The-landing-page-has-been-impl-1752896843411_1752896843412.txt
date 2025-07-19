@@ -1,0 +1,92 @@
+# CONTEXT
+You are operating inside the `mshop` Replit project. The landing page (`/`) has been implemented using Tailwind and Replit DB. The current issue is the data layer: it is using empty or placeholder content.
+
+Your task is to scrape real-world oil & gas product listings and category names from public sources, store the output into Replit DB, and dynamically render them into the landing page.
+
+---
+
+# SCRAPING DIRECTIVE
+
+Use Replit's built-in `fetch()` and any accessible API or public HTML to extract real data.  
+Preferred sources:
+- alibaba.com
+- made-in-china.com
+- energydais.com
+- globalspec.com
+- offshore-technology.com
+
+You must:
+- Extract product name, image URL, price (if shown), region, tags or specs
+- Extract or define category name that matches our B2B scope
+- Limit scrape to 10–15 items total
+
+If source blocks bots or has CORS issues, fallback to static JSON import temporarily — but still store result into Replit DB.
+
+---
+
+# DATA SCHEMA (REPLIT DB)
+
+## Keys: `product:{id}`
+
+```ts
+{
+  id: string;
+  name: string;
+  price: number | null;
+  imageUrl: string;
+  region: string | null;
+  tags: string[];
+  category: string;
+}
+
+Keys: category:{slug}
+
+{
+  id: string;
+  name: string;
+  imageUrl: string;
+}
+
+INTEGRATION
+
+    Use lib/landingDb.ts to expose:
+
+        getAllCategories()
+
+        getFeaturedProducts()
+
+    Seed DB only if keys do not exist
+
+    Dynamically hydrate /landing/page.tsx with this live data
+
+UI RENDERING (EXISTING)
+
+    Show “Shop by Category” grid with real scraped categories and images
+
+    Show “Featured Products” from scraped content
+
+    Ensure images are displayed using correct URLs
+
+    Do not reference local assets or fake data
+
+    All layout must remain Alibaba-style, mobile responsive
+
+CONSTRAINTS
+
+    Do not use Supabase
+
+    Do not mutate other application routes
+
+    Do not block Replit DB with unnecessary keys
+
+    Do not over-fetch or violate robots.txt
+
+RETURN
+
+Output must include:
+
+    Number of products and categories scraped
+
+    Sample Replit DB keys and data stored
+
+    Confirmation that landing page is now hydrated with real content
