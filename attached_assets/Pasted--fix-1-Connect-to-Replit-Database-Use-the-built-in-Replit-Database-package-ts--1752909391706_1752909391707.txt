@@ -1,0 +1,67 @@
+/fix
+
+1. **Connect to Replit Database**
+   - Use the built-in Replit Database package:
+     ```ts
+     import Database from "@replit/database"
+     const db = new Database()
+     ```
+   - Replace all static/dummy JSONs used for:
+     - Products
+     - Ads
+     - Banners
+     - Homepage carousels
+   - Store structured records like:
+     ```ts
+     {
+       id: "uuid",
+       name: "Solar Pipe Fittings",
+       image: "https://replit-image-store.com/...",
+       seller_id: "user-uuid",
+       category: "Oil & Gas",
+       price: 4900
+     }
+     ```
+
+2. **Move Image References to DB**
+   - Create an `image_library` entry in DB with:
+     ```ts
+     {
+       type: "banner" | "product" | "ad" | "background",
+       tags: ["oil", "marine", "injection mold", "muvex"],
+       url: "https://replit-image-store.com/..."
+     }
+     ```
+   - Replace all hardcoded image paths (`/assets/img.png`, `/public/banner.jpg`) with references from this DB
+
+3. **Enable Smart Image Sourcing (via Claude)**
+   - For any placeholder:
+     - Use Claude’s MCP to fetch appropriate royalty-free or AI-generated image URLs
+     - Example tags: `["supplier", "oil rig", "shipping", "industrial warehouse", "product showcase"]`
+   - Tailor styles to Muvex (dark/industrial or bright/logistics-themed)
+   - Claude: ensure visual diversity and vertical consistency (e.g., all product thumbnails = 4:5)
+
+4. **Create Helper: lib/images.ts**
+   - Add helper to pull random or filtered images by tag
+     ```ts
+     export async function getImageByTag(tag: string): Promise<string> {
+       const images = await db.get("image_library")
+       return images.find(img => img.tags.includes(tag))?.url || fallback
+     }
+     ```
+
+5. **Audit All Components Using Images**
+   - Pages/components:
+     - `/product`, `/ads`, `/carousel`, `/featured`, `/insights`
+   - Replace any fake or static image refs with:
+     - `await getImageByTag("product")` or `await db.get('products')`
+
+6. **Push to GitHub**
+   - After migration:
+     ```sh
+     git add .
+     git commit -m "Replace fake data with Replit DB + image sourcing via Claude"
+     git push
+     ```
+
+Claude: Use the active Replit DB. Scan project for all hardcoded image usage and remove it. Scrape or AI-generate relevant images for Oil & Gas, Marine, Industrial, or Supplier verticals. Store in DB as reusable image library. Prioritize structure, consistency, and scoping to `user_id` where relevant.

@@ -977,6 +977,9 @@ video {
 .max-w-none {
   max-width: none;
 }
+.max-w-screen-xl {
+  max-width: 1280px;
+}
 .max-w-sm {
   max-width: 24rem;
 }
