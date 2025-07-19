@@ -1,0 +1,116 @@
+/fix
+
+# CONTEXT
+You are working on the `mshop` SaaS marketplace project on Replit. The goal is to deploy a temporary mock **landing page** to represent Muvex, styled after **Alibaba.com**. This will use **Replit DB** as the backend for content management.
+
+The output will serve as the default homepage `/`, containing promotional and discovery elements for buyers and sellers.
+
+---
+
+# TASKS
+
+## 1. ROUTING
+- Create `app/(public)/landing/page.tsx`
+- Route: `/`
+- This will override the homepage route temporarily for testing
+- Do not affect `/dashboard`, `/shop`, or `/services` routes
+
+---
+
+## 2. LAYOUT STRUCTURE (COPY FROM ALIBABA)
+Use TailwindCSS with full-width responsive layout. Sections:
+
+- Top Navbar: Muvex logo + links (Products, Services, Insights, About)
+- Hero Banner: full-width background image with text overlay CTA
+- Grid Section: Categories (use 8 predefined)
+- Featured Carousel: sample products with images, prices, tags
+- Supplier Logos: Trusted brands (placeholder)
+- CTA Block: "Start Selling on Muvex", big call-to-action
+- Footer: contact links, about, terms
+
+---
+
+## 3. DUMMY DATA
+Use Replit DB to simulate dynamic loading.
+
+Schema:
+```ts
+category:{id} = {
+  id: string;
+  name: string;
+  imageUrl: string;
+}
+
+product:{id} = {
+  id: string;
+  name: string;
+  price: number;
+  imageUrl: string;
+  region: string;
+  tags: string[];
+  category: string;
+}
+
+section:hero = {
+  title: string;
+  subtitle: string;
+  backgroundImage: string;
+}
+
+cta:join = {
+  heading: string;
+  subheading: string;
+  buttonLabel: string;
+  link: string;
+}
+
+Seed this data on first load using scripts/seed-landing-data.ts if data keys are not found in DB.
+4. INTEGRATION
+
+    Create lib/landingDb.ts
+
+    Use Replit DB to fetch all keys matching:
+
+        category:*
+
+        product:*
+
+        section:hero
+
+        cta:join
+
+    Use Promise.all or async mapping to resolve content
+
+5. OPTIONAL ENHANCEMENTS
+
+If time permits:
+
+    Add static app/insights/page.tsx for blogs
+
+    Add /landing/preview page to test alternate layout
+
+    Support “region” filter in product cards
+
+VERIFICATION
+
+    Match Alibaba layout styling (without using exact clone)
+
+    Ensure homepage works offline from other dashboards
+
+    Ensure Replit DB read/write works
+
+    Do not use Supabase
+
+    Only use Replit’s built-in dependencies
+
+OUTPUT
+
+Return:
+
+    Files created and modified
+
+    DB keys and sample entries
+
+    Seed script name
+
+    Any stubbed or static fallback sections
