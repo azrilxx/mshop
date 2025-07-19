@@ -47,6 +47,9 @@ export interface User {
   country?: string
   registeredAt?: string
   status?: 'active' | 'suspended'
+  socialProvider?: 'facebook' | 'google' | 'linkedin'
+  socialId?: string
+  profileImage?: string
 }
 
 export interface Product {
@@ -259,24 +262,27 @@ export const reportDb = {
 }
 
 export const userDb = {
-  async create(email: string, password: string, role: 'buyer' | 'seller' | 'admin'): Promise<User> {
+  async create(email: string, password: string | null, role: 'buyer' | 'seller' | 'admin' = 'buyer', socialData?: Partial<User>): Promise<User> {
     const existingUser = await db.get(`user:${email}`)
     if (existingUser) {
       throw new Error('User already exists')
     }
 
+    const hashedPassword = password ? await bcrypt.hash(password, 10) : undefined
+
     const user: User = {
       id: uuidv4(),
       email,
-      passwordHash: await bcrypt.hash(password, 10),
+      passwordHash: hashedPassword,
       role,
-      is_verified: role === 'admin' ? true : false,
+      is_verified: socialData?.is_verified || false,
       createdAt: new Date().toISOString(),
       notifyOrder: true,
       notifyStatus: true,
       notifyMarketing: false,
       twoFactorEnabled: role === 'admin',
-      bookmarks: []
+      bookmarks: [],
+      ...socialData
     }
 
     await db.set(`user:${email}`, user)
@@ -1029,6 +1035,7 @@ export const commentDb = {
 export const quoteDb = {
   async create(quote: Omit<Quote, 'id' | 'createdAt'>): Promise<Quote> {
     const newQuote: Quote = {
+      ...```text
       ...quote,
       id: uuidv4(),
       createdAt: new Date().toISOString()
