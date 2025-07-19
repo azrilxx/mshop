@@ -1,17 +1,14 @@
 // Ensure fetch is available for Replit DB in Node.js environment
 if (typeof globalThis.fetch === 'undefined') {
   try {
-    const { default: fetch, Headers, Request, Response } = require('node-fetch')
-    // @ts-ignore
-    globalThis.fetch = fetch
-    // @ts-ignore
-    globalThis.Headers = Headers
-    // @ts-ignore
-    globalThis.Request = Request
-    // @ts-ignore
-    globalThis.Response = Response
+    const nodeFetch = require('node-fetch')
+    globalThis.fetch = nodeFetch.default || nodeFetch
+    globalThis.Headers = nodeFetch.Headers
+    globalThis.Request = nodeFetch.Request
+    globalThis.Response = nodeFetch.Response
   } catch (error) {
     console.warn('node-fetch not available, using fallback')
+    globalThis.fetch = async () => ({ ok: false, json: async () => ({}), text: async () => '' })
   }
 }
 

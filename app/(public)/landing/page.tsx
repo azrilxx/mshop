@@ -2,18 +2,23 @@
 import Link from 'next/link'
 import { landingDb } from '@/lib/landingDb'
 import { seedLandingData } from '@/scripts/seed-landing-data'
+import { imageLibrary } from '@/lib/images'
 import SearchBar from '@/components/SearchBar'
 
 export default async function LandingPage() {
   // Seed data if not exists
   await seedLandingData()
+  
+  // Initialize image library
+  await imageLibrary.initializeImages()
 
   // Fetch all landing data
-  const [heroSection, ctaSection, categories, featuredProducts] = await Promise.all([
+  const [heroSection, ctaSection, categories, featuredProducts, bannerImage] = await Promise.all([
     landingDb.getHeroSection(),
     landingDb.getCTASection(),
     landingDb.getCategories(),
-    landingDb.getFeaturedProducts()
+    landingDb.getFeaturedProducts(),
+    imageLibrary.getImageByTag('industrial', 'banner')
   ])
 
   return (
@@ -24,7 +29,7 @@ export default async function LandingPage() {
       <section 
         className="relative h-80 bg-cover bg-center"
         style={{ 
-          backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url(${heroSection?.backgroundImage || 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80'})` 
+          backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url(${heroSection?.backgroundImage || bannerImage})` 
         }}
       >
         <div className="relative max-w-7xl mx-auto px-4 h-full flex flex-col justify-center">
