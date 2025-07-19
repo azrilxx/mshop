@@ -30,6 +30,8 @@ export interface Product {
   images: string[]
   listingType: 'fixed' | 'rfq'
   location: { city: string, country: string }
+  certifications: string[]
+  tags: string[]
   createdAt: string
 }
 
@@ -119,6 +121,16 @@ export interface Quote {
   email: string
   message: string
   createdAt: string
+}
+
+export interface Insight {
+  id: string
+  title: string
+  content: string
+  imageUrl: string
+  author: string
+  publishedAt: string
+  featured: boolean
 }
 
 export const userDb = {
@@ -719,6 +731,98 @@ export const quoteDb = {
     }
     
     return quotes.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  }
+}
+
+export interface Service {
+  id: string
+  serviceType: string
+  description: string
+  region: string
+  contact: string
+  tags: string[]
+  providerId: string
+  status: 'active' | 'inactive'
+  createdAt: string
+}
+
+export const insightDb = {
+  async create(insight: Omit<Insight, 'id'>): Promise<Insight> {
+    const newInsight: Insight = {
+      ...insight,
+      id: uuidv4()
+    }
+
+    await db.set(`insight:${newInsight.id}`, newInsight)
+    return newInsight
+  },
+
+  async findById(id: string): Promise<Insight | null> {
+    const insight = await db.get(`insight:${id}`)
+    return insight as Insight | null
+  },
+
+  async getAll(): Promise<Insight[]> {
+    const keys = await db.list('insight:')
+    const insights: Insight[] = []
+    
+    for (const key of keys) {
+      const insight = await db.get(key)
+      if (insight) insights.push(insight as Insight)
+    }
+    
+    return insights.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
+  },
+
+  async getFeatured(): Promise<Insight | null> {
+    const insights = await this.getAll()
+    return insights.find(insight => insight.featured) || null
+  }
+}
+
+export const serviceDb = {
+  async create(service: Omit<Service, 'id' | 'createdAt'>): Promise<Service> {
+    const newService: Service = {
+      ...service,
+      id: uuidv4(),
+      createdAt: new Date().toISOString()
+    }
+
+    await db.set(`service:${newService.id}`, newService)
+    return newService
+  },
+
+  async findById(id: string): Promise<Service | null> {
+    const service = await db.get(`service:${id}`)
+    return service as Service | null
+  },
+
+  async getAll(): Promise<Service[]> {
+    const keys = await db.list('service:')
+    const services: Service[] = []
+    
+    for (const key of keys) {
+      const service = await db.get(key)
+      if (service && (service as Service).status === 'active') {
+        services.push(service as Service)
+      }
+    }
+    
+    return services.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  },
+
+  async findByProvider(providerId: string): Promise<Service[]> {
+    const keys = await db.list('service:')
+    const services: Service[] = []
+    
+    for (const key of keys) {
+      const service = await db.get(key)
+      if (service && (service as Service).providerId === providerId) {
+        services.push(service as Service)
+      }
+    }
+    
+    return services.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
   }
 }
 

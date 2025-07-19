@@ -54,7 +54,7 @@ export default function Navbar({ user }: NavbarProps) {
                 Orders
               </Link>
             )}
-            
+
             {/* Categories Dropdown */}
             <div className="relative group">
               <button className="nav-link flex items-center">
@@ -77,6 +77,12 @@ export default function Navbar({ user }: NavbarProps) {
                 </div>
               </div>
             </div>
+            <Link href="/services" className="nav-link">
+              Services
+            </Link>
+            <Link href="/insights" className="nav-link">
+              Insights
+            </Link>
           </div>
 
           {/* Search Bar */}
@@ -94,7 +100,7 @@ export default function Navbar({ user }: NavbarProps) {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               </button>
-              
+
               {/* Search Suggestions Dropdown */}
               {isSearchOpen && (
                 <div className="search-dropdown">
@@ -131,14 +137,14 @@ export default function Navbar({ user }: NavbarProps) {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                   </button>
-                  
+
                   <div className="absolute right-0 top-full w-48 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 mt-2">
                     <div className="py-2">
                       <div className="px-4 py-2 text-sm text-gray-500">Signed in as</div>
                       <div className="px-4 py-1 text-sm font-medium text-gray-900 border-b border-gray-100">{user.email}</div>
-                      
+
                       <Link href="/dashboard" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Dashboard</Link>
-                      
+
                       {user.role === 'seller' && (
                         <Link href="/seller" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
                           <span className="flex items-center">
@@ -149,7 +155,7 @@ export default function Navbar({ user }: NavbarProps) {
                           </span>
                         </Link>
                       )}
-                      
+
                       {user.role === 'admin' && (
                         <Link href="/admin" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
                           <span className="flex items-center">
@@ -161,7 +167,7 @@ export default function Navbar({ user }: NavbarProps) {
                           </span>
                         </Link>
                       )}
-                      
+
                       <div className="border-t border-gray-100 mt-2 pt-2">
                         <button
                           onClick={handleLogout}
@@ -207,8 +213,10 @@ export default function Navbar({ user }: NavbarProps) {
               {user && (
                 <Link href="/orders" className="block px-4 py-2 text-gray-700 hover:bg-gray-50 rounded-lg">Orders</Link>
               )}
+              <Link href="/services" className="block px-4 py-2 text-gray-700 hover:bg-gray-50 rounded-lg">Services</Link>
+              <Link href="/insights" className="block px-4 py-2 text-gray-700 hover:bg-gray-50 rounded-lg">Insights</Link>
             </div>
-            
+
             {/* Mobile Search */}
             <div className="mt-4 px-4">
               <input

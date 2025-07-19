@@ -4,6 +4,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { OIL_GAS_CATEGORIES } from '@/lib/constants/categories'
+import TagInput from '@/components/TagInput'
 
 export default function CreateProductForm() {
   const router = useRouter()
@@ -18,8 +19,30 @@ export default function CreateProductForm() {
       city: '',
       country: ''
     },
-    images: [] as string[]
+    images: [] as string[],
+    certifications: [] as string[],
+    tags: [] as string[]
   })
+
+  const handleCertificationUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (files) {
+      // In a real implementation, you'd upload to a file storage service
+      // For now, we'll simulate with placeholder URLs
+      const newCertifications = Array.from(files).map(file => 
+        `https://placeholder-certs.com/${file.name}`
+      )
+      setFormData({
+        ...formData,
+        certifications: [...formData.certifications, ...newCertifications]
+      })
+    }
+  }
+
+  const removeCertification = (index: number) => {
+    const newCertifications = formData.certifications.filter((_, i) => i !== index)
+    setFormData({ ...formData, certifications: newCertifications })
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -180,6 +203,52 @@ export default function CreateProductForm() {
             required
           />
         </div>
+      </div>
+
+      <div>
+        <label htmlFor="certifications" className="block text-sm font-medium text-gray-700 mb-2">
+          Certifications (Optional)
+        </label>
+        <input
+          type="file"
+          id="certifications"
+          multiple
+          accept=".pdf,.jpg,.jpeg,.png"
+          onChange={handleCertificationUpload}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <p className="text-xs text-gray-500 mt-1">Upload certification documents (PDF, JPG, PNG)</p>
+        
+        {formData.certifications.length > 0 && (
+          <div className="mt-2">
+            <p className="text-sm font-medium text-gray-700 mb-2">Uploaded Certifications:</p>
+            <div className="space-y-2">
+              {formData.certifications.map((cert, index) => (
+                <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                  <span className="text-sm text-gray-600">{cert.split('/').pop()}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeCertification(index)}
+                    className="text-red-600 hover:text-red-800 text-sm"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Tags
+        </label>
+        <TagInput
+          tags={formData.tags}
+          onChange={(tags) => setFormData({ ...formData, tags })}
+          placeholder="Add tags to help buyers find your product..."
+        />
       </div>
 
       <button
