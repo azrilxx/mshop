@@ -1,5 +1,5 @@
 
-import { replitDb } from './db'
+import db from './db'
 
 export interface LandingCategory {
   id: string
@@ -33,7 +33,7 @@ export interface CTASection {
 export const landingDb = {
   async getHeroSection(): Promise<HeroSection | null> {
     try {
-      return await replitDb.get('section:hero')
+      return await db.get('section:hero')
     } catch (error) {
       console.error('Failed to get hero section:', error)
       return null
@@ -42,7 +42,7 @@ export const landingDb = {
 
   async getCTASection(): Promise<CTASection | null> {
     try {
-      return await replitDb.get('cta:join')
+      return await db.get('cta:join')
     } catch (error) {
       console.error('Failed to get CTA section:', error)
       return null
@@ -51,10 +51,10 @@ export const landingDb = {
 
   async getCategories(): Promise<LandingCategory[]> {
     try {
-      const keys = await replitDb.list('category:')
+      const keys = await db.list('category:')
       const categories = await Promise.all(
         keys.map(async (key) => {
-          const category = await replitDb.get(key)
+          const category = await db.get(key)
           return category
         })
       )
@@ -67,10 +67,10 @@ export const landingDb = {
 
   async getFeaturedProducts(): Promise<LandingProduct[]> {
     try {
-      const keys = await replitDb.list('product:')
+      const keys = await db.list('product:')
       const products = await Promise.all(
         keys.map(async (key) => {
-          const product = await replitDb.get(key)
+          const product = await db.get(key)
           return product
         })
       )
