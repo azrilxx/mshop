@@ -1,0 +1,48 @@
+/fix
+
+1. **Activate Autonomous Agentic Mode (MCP)**
+   - Before coding, analyze the top navigation of https://www.alibaba.com
+   - Confirm exact sequence and groupings of header components (top bar and second row)
+   - Pay attention to:
+     - Grouping of "Deliver to", "Language", "Cart", "Sign In", "Create Account"
+     - Alignment of left vs center vs right sections
+     - Use of consistent spacing and semantic HTML
+
+2. **Rebuild Header Based on Alibaba UI**
+   - Remove existing custom header (if present)
+   - Replace with two-part structure:
+     ```
+     <TopNav>
+       [🇲🇾 MY] [🌐 Language-MYR] [🛒 Cart] [👤 Sign In] [🟠 Create Account]
+     </TopNav>
+     <SecondNav>
+       [AI sourcing agent] [Buyer Central] [Help Center] [App & Extension] [Become a supplier]
+     </SecondNav>
+     ```
+   - Claude: follow spacing, vertical alignment, and icon placement exactly
+
+3. **Implement Dropdown Hover for Sign In**
+   - When hovering on `Sign In`, show dropdown menu with:
+     - [🔒 Sign In] + social login buttons (Facebook, Google, LinkedIn)
+     - Links: My Account, Orders, Messages, RFQs, Favorites, Membership Program
+   - Use `absolute` positioning and Tailwind transitions for smooth animation
+   - Make dropdown accessible (use `aria-haspopup`, `aria-expanded`)
+
+4. **Ensure Layout Responsiveness**
+   - Wrap content in `max-w-screen-xl mx-auto px-4` for horizontal centering
+   - Use Tailwind grid or flexbox for large screen vs mobile collapse
+   - Claude: prioritize usability over pixel-perfection, but keep element sequence fixed
+
+5. **Use Icon Libraries**
+   - For icons: use Lucide, Tabler Icons or Heroicons to mimic Alibaba’s iconography
+   - Align vertically with text
+
+6. **Push Changes to GitHub**
+   - Stage all files:
+     ```sh
+     git add .
+     git commit -m "Accurate Alibaba-style header layout with dropdown (MCP verified)"
+     git push
+     ```
+
+Claude: This is a pixel-aligned replication task. Use your web MCP capabilities to verify live Alibaba DOM layout, inspect sequence, and match both HTML structure and visual flow. Do NOT guess or create approximate headers — replicate accurately. If unsure, prompt developer for screenshot comparison.
