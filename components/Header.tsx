@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useState } from 'react'
@@ -48,19 +49,17 @@ export default function Header() {
 
                 {/* Dropdown Menu */}
                 {showSignInDropdown && (
-                  <div className="absolute top-full right-0 mt-1 w-72 bg-white rounded-lg shadow-xl border z-50">
-                    <div className="p-4">
+                  <div className="absolute top-full right-0 mt-1 w-48 bg-white rounded shadow-lg border z-50">
+                    <div className="p-3">
                       <Link 
                         href="/login"
-                        className="block w-full bg-orange-500 text-white py-2 px-4 rounded text-center hover:bg-orange-600 mb-3"
+                        className="block w-full bg-orange-500 text-white py-2 px-3 rounded text-center hover:bg-orange-600 mb-2 text-xs"
                       >
                         Sign In
                       </Link>
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        <Link href="/dashboard" className="text-gray-600 hover:text-orange-500 py-1">My Account</Link>
-                        <Link href="/orders" className="text-gray-600 hover:text-orange-500 py-1">Orders</Link>
-                        <Link href="/dashboard" className="text-gray-600 hover:text-orange-500 py-1">Messages</Link>
-                        <Link href="/dashboard" className="text-gray-600 hover:text-orange-500 py-1">RFQs</Link>
+                      <div className="text-xs text-gray-600 space-y-1">
+                        <Link href="/dashboard" className="block hover:text-orange-500">My Account</Link>
+                        <Link href="/orders" className="block hover:text-orange-500">Orders</Link>
                       </div>
                     </div>
                   </div>
@@ -79,29 +78,29 @@ export default function Header() {
       </div>
 
       {/* Main Header */}
-      <div className="bg-white border-b border-gray-200">
+      <div className="bg-white">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
-            <Link href="/" className="text-2xl font-bold text-orange-500">
+            <Link href="/" className="text-2xl font-bold text-orange-500 mr-8">
               Muvex
             </Link>
 
             {/* Navigation Links */}
-            <nav className="hidden lg:flex items-center space-x-8">
-              <Link href="/dashboard" className="text-sm text-gray-600 hover:text-orange-500">
+            <nav className="hidden lg:flex items-center space-x-8 flex-1">
+              <Link href="/dashboard" className="text-sm text-gray-700 hover:text-orange-500">
                 AI Sourcing
               </Link>
-              <Link href="/dashboard/buyer" className="text-sm text-gray-600 hover:text-orange-500">
+              <Link href="/dashboard/buyer" className="text-sm text-gray-700 hover:text-orange-500">
                 Buyer Central
               </Link>
-              <Link href="/dashboard" className="text-sm text-gray-600 hover:text-orange-500">
+              <Link href="/dashboard" className="text-sm text-gray-700 hover:text-orange-500">
                 Help Center
               </Link>
-              <Link href="/dashboard" className="text-sm text-gray-600 hover:text-orange-500">
+              <Link href="/dashboard" className="text-sm text-gray-700 hover:text-orange-500">
                 App & Extension
               </Link>
-              <Link href="/register?type=supplier" className="text-sm text-gray-600 hover:text-orange-500">
+              <Link href="/register?type=supplier" className="text-sm text-gray-700 hover:text-orange-500">
                 Become a Supplier
               </Link>
             </nav>
@@ -112,14 +111,23 @@ export default function Header() {
                 <input
                   type="text"
                   placeholder="What are you looking for..."
-                  className="w-full pl-4 pr-10 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full pl-4 pr-10 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500"
                 />
                 <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               </div>
             </div>
 
+            {/* Right Section */}
+            <div className="hidden lg:flex items-center space-x-6 ml-8">
+              <Link href="/products" className="text-sm text-gray-700 hover:text-orange-500">Products</Link>
+              <Link href="/services" className="text-sm text-gray-700 hover:text-orange-500">Services</Link>
+              <Link href="/insights" className="text-sm text-gray-700 hover:text-orange-500">Insights</Link>
+              <Link href="/login" className="text-sm text-gray-700 hover:text-orange-500">Sign In</Link>
+              <Link href="/register" className="bg-orange-500 text-white px-4 py-2 rounded text-sm font-medium hover:bg-orange-600">Join Free</Link>
+            </div>
+
             {/* Mobile Menu */}
-            <button className="lg:hidden p-2">
+            <button className="lg:hidden p-2 ml-4">
               <Menu className="w-5 h-5" />
             </button>
           </div>
@@ -131,22 +139,9 @@ export default function Header() {
             <input
               type="text"
               placeholder="What are you looking for..."
-              className="w-full pl-4 pr-10 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
+              className="w-full pl-4 pr-10 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500"
             />
             <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-          </div>
-        </div>
-      </div>
-
-      {/* Second Navigation Bar */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex items-center justify-center space-x-8 h-12 text-sm">
-            <Link href="/products" className="text-gray-600 hover:text-orange-500">Products</Link>
-            <Link href="/services" className="text-gray-600 hover:text-orange-500">Services</Link>
-            <Link href="/insights" className="text-gray-600 hover:text-orange-500">Insights</Link>
-            <Link href="/login" className="text-gray-600 hover:text-orange-500">Sign In</Link>
-            <Link href="/register" className="bg-orange-500 text-white px-4 py-1 rounded hover:bg-orange-600">Join Free</Link>
           </div>
         </div>
       </div>
