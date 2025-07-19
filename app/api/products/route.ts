@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const merchantId = searchParams.get('merchantId')
     const isPublic = searchParams.get('public') === 'true'
-    
+
     if (merchantId) {
       // Get products for a specific merchant
       const products = await productDb.findByMerchant(merchantId)
@@ -31,48 +31,41 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await requireRole(['seller', 'admin'])
-    const { name, price, description, category, images } = await request.json()
-
-    if (!name || !price || !description || !category) {
-      return NextResponse.json(
-        { error: 'Name, price, description, and category are required' },
-        { status: 400 }
-      )
+    const user = await requireAuth()
+    if (!user || user.role !== 'seller') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Check plan limits for sellers
-    if (user.role === 'seller') {
-      const plan = await planDb.get(user.id)
-      
-      if (plan.quotaUsed >= plan.maxProducts) {
-        return NextResponse.json(
-          { error: `Product limit reached. Your ${plan.tier} plan allows ${plan.maxProducts} products. Upgrade your plan to create more products.` },
-          { status: 403 }
-        )
-      }
+    const { name, price, description, category, images, listingType, location } = await request.json()
+
+    // Check seller's plan limits
+    const plan = await planDb.get(user.id)
+    const sellerProducts = await productDb.findByMerchant(user.id)
+
+    if (plan.maxProducts !== -1 && sellerProducts.length >= plan.maxProducts) {
+      return NextResponse.json({ 
+        error: `Product limit reached. Your ${plan.tier} plan allows ${plan.maxProducts} products.` 
+      }, { status: 403 })
     }
 
     const product = await productDb.create({
       name,
-      price: parseFloat(price),
+      price: parseFloat(price) || 0,
       description,
       category,
       merchantId: user.id,
       status: 'active',
-      images: images || []
+      images: images || [],
+      listingType: listingType || 'fixed',
+      location: location || { city: '', country: '' }
     })
 
-    // Increment quota for sellers
-    if (user.role === 'seller') {
-      await planDb.incrementQuota(user.id)
-    }
+    // Increment seller's quota
+    await planDb.incrementQuota(user.id)
 
-    return NextResponse.json(product, { status: 201 })
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || 'Failed to create product' },
-      { status: 500 }
-    )
+    return NextResponse.json(product)
+  } catch (error) {
+    console.error('Error creating product:', error)
+    return NextResponse.json({ error: 'Failed to create product' }, { status: 500 })
   }
 }

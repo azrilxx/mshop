@@ -16,6 +16,7 @@ export interface User {
   notifyMarketing?: boolean
   twoFactorEnabled?: boolean
   cartNotifiedAt?: string
+  whatsappNumber?: string
 }
 
 export interface Product {
@@ -27,6 +28,8 @@ export interface Product {
   merchantId: string
   status: 'active' | 'inactive'
   images: string[]
+  listingType: 'fixed' | 'rfq'
+  location: { city: string, country: string }
   createdAt: string
 }
 
@@ -106,6 +109,16 @@ export interface Comment {
   isReply: boolean
   createdAt: string
   updatedAt: string
+}
+
+export interface Quote {
+  id: string
+  productId: string
+  buyerId?: string // optional for anonymous quotes
+  name: string
+  email: string
+  message: string
+  createdAt: string
 }
 
 export const userDb = {
@@ -662,6 +675,50 @@ export const commentDb = {
     
     await db.delete(`comment:${id}`)
     return true
+  }
+}
+
+export const quoteDb = {
+  async create(quote: Omit<Quote, 'id' | 'createdAt'>): Promise<Quote> {
+    const newQuote: Quote = {
+      ...quote,
+      id: uuidv4(),
+      createdAt: new Date().toISOString()
+    }
+
+    await db.set(`quote:${newQuote.id}`, newQuote)
+    return newQuote
+  },
+
+  async getByProduct(productId: string): Promise<Quote[]> {
+    const keys = await db.list('quote:')
+    const quotes: Quote[] = []
+    
+    for (const key of keys) {
+      const quote = await db.get(key)
+      if (quote && (quote as Quote).productId === productId) {
+        quotes.push(quote as Quote)
+      }
+    }
+    
+    return quotes.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  },
+
+  async getBySeller(sellerId: string): Promise<Quote[]> {
+    const keys = await db.list('quote:')
+    const quotes: Quote[] = []
+    
+    for (const key of keys) {
+      const quote = await db.get(key) as Quote
+      if (quote) {
+        const product = await productDb.findById(quote.productId)
+        if (product && product.merchantId === sellerId) {
+          quotes.push(quote)
+        }
+      }
+    }
+    
+    return quotes.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
   }
 }
 
