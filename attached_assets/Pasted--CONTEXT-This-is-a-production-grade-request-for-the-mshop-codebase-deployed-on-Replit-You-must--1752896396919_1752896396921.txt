@@ -1,0 +1,127 @@
+# CONTEXT
+This is a production-grade request for the `mshop` codebase deployed on Replit. You must build a homepage landing screen styled after Alibaba, using Replit DB to dynamically render categories and featured products. This is a standalone landing screen at `/`.
+
+The system uses:
+- Next.js (App Router)
+- Replit DB (no Supabase)
+- TailwindCSS
+- File uploads to attached_assets/ or public folder
+
+---
+
+# OBJECTIVE
+Build a pixel-consistent homepage UI inspired by Alibaba. Seed realistic dummy data for oil & gas. Match the following structure:
+
+---
+
+# STRUCTURE: `/app/(public)/landing/page.tsx`
+
+### 1. Top Navigation (static)
+- Left: Muvex logo (orange)
+- Right: Links: Products | Services | Insights | Sign In | [Join Free]
+
+### 2. Hero Banner
+- Full-width background image (placeholder)
+- Overlay text:
+  - Heading: “Discover Oil & Gas Equipment. Redefined.”
+  - Button: [Browse Marketplace]
+
+### 3. Category Grid (from Replit DB)
+- Title: “Shop by Category”
+- 8 card tiles from DB
+- Each category:
+  - Name
+  - Icon/image
+  - Link to `/shop?category=X`
+
+### 4. Featured Products (from Replit DB)
+- Title: “Featured Products”
+- Horizontal scroll or grid layout
+- Each product:
+  - Image
+  - Name
+  - Price
+  - Region
+  - Tags
+
+### 5. Supplier Logos Row (optional static row)
+- Logo grid with 6–8 placeholder logos (public PNG)
+
+### 6. CTA Section
+- Title: “Start Selling on Muvex”
+- Subtitle: “List your inventory and reach verified buyers today.”
+- Button: [Join as Seller]
+
+### 7. Footer
+- Column links: About, Contact, Terms, LinkedIn icon
+
+---
+
+# DATA SEEDING (via Replit DB)
+
+Create `scripts/seed-landing-data.ts`
+
+## Categories
+Store under keys: `category:{slug}`
+```ts
+[
+  { name: "Corrosion-Resistant Alloys (CRA)", imageUrl: "/assets/cra.jpg" },
+  { name: "Pressure Vessels & Flanges", imageUrl: "/assets/vessels.jpg" },
+  { name: "Rope Access Equipment", imageUrl: "/assets/rope.jpg" },
+  { name: "Pipe Cleaning Tools", imageUrl: "/assets/pipe.jpg" },
+  { name: "Measurement & Instrumentation", imageUrl: "/assets/measure.jpg" },
+  { name: "Rental Tanks & Storage", imageUrl: "/assets/tanks.jpg" },
+  { name: "Valves & Actuators", imageUrl: "/assets/valves.jpg" },
+  { name: "Offshore & Marine Equipment", imageUrl: "/assets/offshore.jpg" }
+]
+
+Products
+
+Store under keys: product:{id}
+Each product should include: name, price, imageUrl, region, tags, category
+
+Example:
+
+{
+  name: "Inconel 625 Seamless Pipe",
+  price: 98,
+  imageUrl: "/assets/inconel.jpg",
+  region: "Malaysia",
+  tags: ["CRA", "Nickel Alloy"],
+  category: "Corrosion-Resistant Alloys (CRA)"
+}
+
+Seed 8 products total.
+DB FETCHING
+
+Create lib/landingDb.ts:
+
+    getAllCategories()
+
+    getFeaturedProducts()
+
+In landing/page.tsx, hydrate from these functions.
+Use fallback empty arrays if keys are missing.
+VALIDATION
+
+    Do not affect existing /dashboard or /shop
+
+    Do not hardcode category HTML; hydrate from Replit DB only
+
+    Confirm layout matches Alibaba-style spacing and responsive grid
+
+    Confirm category cards and featured products are mapped correctly
+
+    Footer and CTA section must be responsive on mobile
+
+OUTPUT
+
+Return:
+
+    Files created or modified
+
+    Sample DB keys and shape
+
+    Confirmation of home page render
+
+    Note if public assets folder is used for sample images
