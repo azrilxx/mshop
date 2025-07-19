@@ -55,6 +55,7 @@ export interface Product {
   tags: string[]
   createdAt: string
   specSheetUrl?: string
+  stock: number | null
 }
 
 export interface RFQ {
@@ -67,6 +68,7 @@ export interface RFQ {
   region: string
   message: string
   submittedAt: string
+  status: 'submitted' | 'viewed' | 'responded' | 'archived'
 }
 
 export interface Order {
@@ -274,7 +276,8 @@ export const productDb = {
       ...product,
       id: uuidv4(),
       createdAt: new Date().toISOString(),
-      tags: product.tags || []
+      tags: product.tags || [],
+      stock: product.stock || null
     }
 
     await db.set(`product:${newProduct.id}`, newProduct)
@@ -366,11 +369,12 @@ export const productDb = {
 }
 
 export const rfqDb = {
-  async create(rfq: Omit<RFQ, 'id' | 'submittedAt'>): Promise<RFQ> {
+  async create(rfq: Omit<RFQ, 'id' | 'submittedAt' | 'status'>): Promise<RFQ> {
     const newRFQ: RFQ = {
       ...rfq,
       id: uuidv4(),
-      submittedAt: new Date().toISOString()
+      submittedAt: new Date().toISOString(),
+      status: 'submitted'
     }
 
     await db.set(`rfq:${rfq.productId}:${newRFQ.id}`, newRFQ)
@@ -418,6 +422,15 @@ export const rfqDb = {
     }
     
     return rfqs.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
+  },
+
+  async updateStatus(productId: string, rfqId: string, status: 'submitted' | 'viewed' | 'responded' | 'archived'): Promise<RFQ | null> {
+    const rfq = await db.get(`rfq:${productId}:${rfqId}`) as RFQ
+    if (!rfq) return null
+
+    const updatedRFQ = { ...rfq, status }
+    await db.set(`rfq:${productId}:${rfqId}`, updatedRFQ)
+    return updatedRFQ
   }
 }
 

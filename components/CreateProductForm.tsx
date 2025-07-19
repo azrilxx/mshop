@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useState } from 'react'
@@ -21,7 +20,8 @@ export default function CreateProductForm() {
     },
     images: [] as string[],
     certifications: [] as string[],
-    tags: [] as string[]
+    tags: [] as string[],
+    stock: ''
   })
 
   const handleCertificationUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -31,22 +31,22 @@ export default function CreateProductForm() {
         const formData = new FormData()
         formData.append('file', file)
         formData.append('type', 'certification')
-        
+
         const response = await fetch('/api/upload', {
           method: 'POST',
           body: formData
         })
-        
+
         if (response.ok) {
           const { url } = await response.json()
           return url
         }
         return null
       })
-      
+
       const uploadedUrls = await Promise.all(uploadPromises)
       const validUrls = uploadedUrls.filter(url => url !== null)
-      
+
       setFormData({
         ...formData,
         certifications: [...formData.certifications, ...validUrls]
@@ -58,6 +58,14 @@ export default function CreateProductForm() {
     const newCertifications = formData.certifications.filter((_, i) => i !== index)
     setFormData({ ...formData, certifications: newCertifications })
   }
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prevFormData => ({
+      ...prevFormData,
+      [name]: value,
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -71,7 +79,8 @@ export default function CreateProductForm() {
         },
         body: JSON.stringify({
           ...formData,
-          price: formData.listingType === 'fixed' ? parseFloat(formData.price) : 0
+          price: formData.listingType === 'fixed' ? parseFloat(formData.price) : 0,
+          stock: formData.stock ? parseInt(formData.stock) : null
         })
       })
 
@@ -98,7 +107,7 @@ export default function CreateProductForm() {
           type="text"
           id="name"
           value={formData.name}
-          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+          onChange={(e) => handleInputChange(e)}
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           required
         />
@@ -111,7 +120,7 @@ export default function CreateProductForm() {
         <textarea
           id="description"
           value={formData.description}
-          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          onChange={(e) => handleInputChange(e)}
           rows={4}
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           required
@@ -125,7 +134,7 @@ export default function CreateProductForm() {
         <select
           id="category"
           value={formData.category}
-          onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+          onChange={(e) => handleInputChange(e)}
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           required
         >
@@ -149,7 +158,7 @@ export default function CreateProductForm() {
               name="listingType"
               value="fixed"
               checked={formData.listingType === 'fixed'}
-              onChange={(e) => setFormData({ ...formData, listingType: e.target.value as 'fixed' | 'rfq' })}
+              onChange={(e) => handleInputChange(e)}
               className="mr-2"
             />
             Fixed Price
@@ -160,7 +169,7 @@ export default function CreateProductForm() {
               name="listingType"
               value="rfq"
               checked={formData.listingType === 'rfq'}
-              onChange={(e) => setFormData({ ...formData, listingType: e.target.value as 'fixed' | 'rfq' })}
+              onChange={(e) => handleInputChange(e)}
               className="mr-2"
             />
             Request for Quotation
@@ -176,14 +185,33 @@ export default function CreateProductForm() {
           <input
             type="number"
             id="price"
+            name="price"
             step="0.01"
             value={formData.price}
-            onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+            onChange={(e) => handleInputChange(e)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
           />
         </div>
       )}
+
+            {formData.listingType === 'fixed' && (
+            <div>
+              <label htmlFor="stock" className="block text-sm font-medium text-gray-700 mb-2">
+                Stock Quantity (leave blank for unlimited)
+              </label>
+              <input
+                type="number"
+                id="stock"
+                name="stock"
+                value={formData.stock}
+                onChange={(e) => handleInputChange(e)}
+                min="0"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Leave blank for unlimited stock"
+              />
+            </div>
+          )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
@@ -233,7 +261,7 @@ export default function CreateProductForm() {
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <p className="text-xs text-gray-500 mt-1">Upload certification documents (PDF, JPG, PNG)</p>
-        
+
         {formData.certifications.length > 0 && (
           <div className="mt-2">
             <p className="text-sm font-medium text-gray-700 mb-2">Uploaded Certifications:</p>

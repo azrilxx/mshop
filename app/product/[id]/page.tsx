@@ -72,9 +72,20 @@ export default async function ProductPage({ params }: ProductPageProps) {
                 Request for Quote
               </span>
             ) : (
-              <span className="text-3xl font-bold text-green-600">
-                ${product.price.toFixed(2)}
-              </span>
+              <div>
+                <span className="text-3xl font-bold text-green-600">
+                  ${product.price.toFixed(2)}
+                </span>
+                {product.stock !== null && (
+                  <p className="text-sm text-gray-600 mt-1">
+                    {product.stock > 0 ? (
+                      <span className="text-green-600">✓ {product.stock} units in stock</span>
+                    ) : (
+                      <span className="text-red-600">⚠ Out of stock</span>
+                    )}
+                  </p>
+                )}
+              </div>
             )}
           </div>
 

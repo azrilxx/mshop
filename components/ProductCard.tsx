@@ -94,9 +94,16 @@ return (
               </div>
             )}
             <div className="flex items-center justify-between">
-              <span className="text-lg font-bold text-blue-600">
-                ${product.price.toLocaleString()}
-              </span>
+              <div>
+                <span className="text-lg font-bold text-blue-600">
+                  ${product.price.toLocaleString()}
+                </span>
+                {product.stock !== null && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    {product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}
+                  </p>
+                )}
+              </div>
               <button className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm hover:bg-blue-700">
                 View Details
               </button>
