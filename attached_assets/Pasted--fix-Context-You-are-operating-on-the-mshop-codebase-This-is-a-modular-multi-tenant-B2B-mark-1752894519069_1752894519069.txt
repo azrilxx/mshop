@@ -1,0 +1,93 @@
+/fix
+
+# Context
+You are operating on the `mshop` codebase.  
+This is a modular multi-tenant B2B marketplace built for the oil and gas sector.  
+Framework: Next.js (App Router)  
+Database: Replit DB  
+Styling: TailwindCSS  
+Auth: Replit session logic  
+Billing: Stripe (already implemented)  
+Messaging: Email (Mailchimp), WhatsApp (to be added)
+
+The objective of this task is to implement **Wave 1 – Niche Marketplace Mode**.  
+All instructions are scoped to this wave. Do not build beyond this scope.  
+Do not mutate logic outside defined files unless explicitly instructed.
+
+# Input Boundaries
+You must use existing layout structure, component architecture, database models, and style system.  
+You must use TypeScript.  
+You must not assume any external API unless specified.  
+You must not use Supabase or ORM logic.  
+You must verify all DB reads and writes against Replit DB schema in `lib/db.ts`.
+
+# Tasks
+
+## 1. Replace Generic Categories with Oil and Gas Niche Categories
+- File to create or modify: `lib/constants/categories.ts`
+- New categories:
+  - Flanges
+  - Rope Access Equipment
+  - Subsea Connectors
+  - Pipe Cleaning Tools
+  - Pressure Testing Units
+  - Rental Tanks
+  - Measurement & Instrumentation
+- Use this list in:
+  - Product creation form
+  - Product filter dropdown
+  - Product card display
+
+## 2. Add RFQ Listing Type Toggle
+- Extend product schema in Replit DB:
+  - Field: `listingType: "fixed" | "rfq"`
+- Update product creation UI:
+  - File: `components/CreateProductForm.tsx`
+  - Input type: radio toggle for "Fixed Price" or "Request for Quotation"
+- Buyer View:
+  - File: `components/ProductCard.tsx` and `app/product/[id]/page.tsx`
+  - If type is "rfq", display "Request Quote" instead of "Add to Cart"
+  - Create new page: `app/quote/[productId]/page.tsx`
+    - Form: name, email, message
+    - Submit to Replit DB under `quote:{productId}:{buyerId}` or anonymous if not logged in
+- Seller View:
+  - Add `Quotes` tab in seller dashboard
+  - List incoming RFQs per product
+
+## 3. Add Location Field to Product Listings
+- Extend product schema:
+  - Field: `location: { city: string, country: string }`
+- Update seller product creation form:
+  - Add inputs for city and country
+- Buyer View:
+  - Add location filters in product search UI
+  - File to update: `components/ProductFilterForm.tsx` (or create it if missing)
+- Ensure location data is indexed in Replit DB using consistent key names
+
+## 4. Add WhatsApp Contact Integration
+- Extend user schema:
+  - Field: `whatsappNumber: string`
+- Update seller settings UI:
+  - Add WhatsApp input form
+- Product View:
+  - If seller has WhatsApp set, show button: "Contact via WhatsApp"
+  - Format: `https://wa.me/<number>?text=Hi, I am interested in your listing on Muvex`
+
+# Verification Checklist (Claude must validate all items before output)
+- [ ] Category replacement is reflected across all product-facing components
+- [ ] RFQ listings are isolated and do not allow checkout
+- [ ] RFQs are stored per product ID, not globally
+- [ ] No buyer can see other buyers' RFQs
+- [ ] Location input is stored and filterable
+- [ ] WhatsApp button is only rendered when number exists
+- [ ] All reads/writes to Replit DB are tested using current Replit DB SDK
+
+# Output Format
+Return:
+- List of all files created or modified with paths
+- Each component's purpose
+- Confirmed schema changes
+- Any validations applied
+- Any unhandled edge cases (must be listed, not ignored)
+- No extra explanations, no summaries
+
