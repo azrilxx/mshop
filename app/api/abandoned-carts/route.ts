@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cartDb, userDb } from '@/lib/db'
 import { requireRole } from '@/lib/auth'
+import { notificationService } from '@/lib/notification-service'
 
 export async function GET(request: NextRequest) {
   try {
@@ -57,25 +58,14 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Worker endpoint to check for abandoned carts
+// Worker endpoint to process abandoned cart reminders
 export async function PATCH(request: NextRequest) {
   try {
     // This would typically be called by a cron job or background worker
-    const abandonedCarts = await cartDb.getAbandonedCarts()
-    
-    let remindersSent = 0
-    
-    for (const { userId, cart } of abandonedCarts) {
-      // In a real application, you would send an email here
-      // For now, we'll just mark the reminder as sent
-      cart.reminderSent = true
-      await cartDb.update(userId, cart)
-      remindersSent++
-    }
+    await notificationService.processAbandonedCarts()
     
     return NextResponse.json({ 
-      message: `Processed ${remindersSent} abandoned cart reminders`,
-      remindersSent 
+      message: 'Abandoned cart reminders processed successfully'
     })
   } catch (error: any) {
     return NextResponse.json(

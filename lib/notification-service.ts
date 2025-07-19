@@ -87,7 +87,9 @@ export class NotificationService {
               itemCount,
               orderDate: order.createdAt,
               products: sellerProducts.map(p => p.name).join(', ')
-            }
+            },
+            sellerPlan,
+            'transactional'
           )
           console.log(`Order notification sent to seller ${seller.email} for order ${order.id}`)
         } catch (error) {
@@ -127,7 +129,9 @@ export class NotificationService {
             oldStatus,
             totalPrice: order.totalPrice,
             trackingNumber: order.shipmentStatus
-          }
+          },
+          buyerPlan,
+          'transactional'
         )
         console.log(`Status update notification sent to buyer ${buyer.email} for order ${order.id}`)
       } catch (error) {
@@ -158,7 +162,9 @@ export class NotificationService {
               email: seller.email,
               registrationNumber: 'Pending verification',
               submittedAt: seller.createdAt
-            }
+            },
+            adminPlan,
+            'transactional'
           )
           console.log(`New seller notification sent to admin ${admin.email}`)
         } catch (error) {
@@ -207,14 +213,14 @@ export class NotificationService {
       }
 
       try {
-        await emailService.sendTransactionalEmail(
-          EMAIL_TEMPLATES.CART_REMINDER_BUYER,
+        await emailService.sendAbandonedCartEmail(
           { email: user.email },
           {
             itemCount: cart.items.length,
             totalValue: totalValue.toFixed(2),
             cartUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/cart`
-          }
+          },
+          plan
         )
 
         user.cartNotifiedAt = new Date().toISOString()
@@ -256,7 +262,9 @@ export class NotificationService {
             message,
             html: htmlContent,
             title: subject
-          }
+          },
+          plan,
+          'marketing'
         )
         console.log(`Marketing email sent to ${user.email}`)
       } catch (error) {

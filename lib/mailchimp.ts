@@ -207,9 +207,19 @@ class EmailService {
   async sendTransactionalEmail(
     templateId: EmailTemplateType,
     recipient: EmailRecipient,
-    variables: Record<string, any>
+    variables: Record<string, any>,
+    userPlan?: { tier: 'Free' | 'Standard' | 'Premium' },
+    emailType?: 'transactional' | 'cart' | 'marketing'
   ): Promise<void> {
     try {
+      // Enforce plan-based email gating
+      if (userPlan && emailType) {
+        if (!this.canSendEmailByPlan(userPlan.tier, emailType)) {
+          console.log(`Skipped email to ${recipient.email} due to plan: ${userPlan.tier} (type: ${emailType})`)
+          return
+        }
+      }
+
       const template = this.getEmailTemplate(templateId, variables)
 
       if (this.useMailchimp) {
@@ -223,6 +233,19 @@ class EmailService {
     } catch (error) {
       console.error(`Failed to send email ${templateId} to ${recipient.email}:`, error)
       throw error
+    }
+  }
+
+  private canSendEmailByPlan(tier: 'Free' | 'Standard' | 'Premium', emailType: 'transactional' | 'cart' | 'marketing'): boolean {
+    switch (tier) {
+      case 'Free':
+        return emailType === 'transactional'
+      case 'Standard':
+        return emailType === 'transactional' || emailType === 'cart'
+      case 'Premium':
+        return true
+      default:
+        return false
     }
   }
 
@@ -316,6 +339,21 @@ class EmailService {
     }
 
     return result
+  }
+}
+
+  async sendAbandonedCartEmail(
+    recipient: EmailRecipient,
+    variables: Record<string, any>,
+    userPlan: { tier: 'Free' | 'Standard' | 'Premium' }
+  ): Promise<void> {
+    return this.sendTransactionalEmail(
+      EMAIL_TEMPLATES.CART_REMINDER_BUYER,
+      recipient,
+      variables,
+      userPlan,
+      'cart'
+    )
   }
 }
 
