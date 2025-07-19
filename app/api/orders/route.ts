@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { orderDb, cartDb, productDb } from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
 import { notificationService } from '@/lib/notification-service'
+import { getTenantContext, validateOwnership, TenantSecurityError } from '@/lib/tenant'
 
 export async function GET(request: NextRequest) {
   try {
     const user = await requireAuth()
     const orders = await orderDb.findByBuyer(user.id)
-    
+
     // Get product details for each order
     const ordersWithProducts = await Promise.all(
       orders.map(async (order) => {

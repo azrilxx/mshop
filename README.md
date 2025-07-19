@@ -35,6 +35,7 @@ A comprehensive multi-merchant SaaS B2B marketplace platform built with Next.js 
 #### Sellers
 - Subscription plan management
 - Product catalog management (plan-limited)
+- Product catalog management (plan-limited)
 - Advertisement slot booking
 - Seller verification process
 - Real-time order notifications

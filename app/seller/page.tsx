@@ -18,7 +18,7 @@ export default function SellerDashboard() {
   const fetchData = async () => {
     try {
       const [productsRes, ordersRes] = await Promise.all([
-        fetch('/api/products'),
+        fetch('/api/products?userProducts=true'),
         fetch('/api/orders')
       ])
 

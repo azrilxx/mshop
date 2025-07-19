@@ -477,6 +477,22 @@ export const productDb = {
       .slice(0, limit)
 
     return recommendations
+  },
+  async getProducts(filters: any = {}, userId?: string): Promise<Product[]> {
+    let query = `
+      SELECT p.*, u.company_name, u.verified, u.location as seller_location 
+      FROM products p 
+      JOIN users u ON p.user_id = u.id 
+      WHERE p.status = 'active'
+    `
+    const params: any[] = []
+
+    // If userId provided, scope to that user's products
+    if (userId) {
+      query += ` AND p.user_id = $${params.length + 1}`
+      params.push(userId)
+    }
+    return []
   }
 }
 

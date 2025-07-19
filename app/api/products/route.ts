@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { productDb, planDb, planUsageDb } from '@/lib/db'
 import { requireAuth, requireRole } from '@/lib/auth'
 import { getPlanLimits } from '@/lib/plan'
+import { getTenantContext, validateOwnership, TenantSecurityError } from '@/lib/tenant'
 
 export async function GET(request: NextRequest) {
   try {
