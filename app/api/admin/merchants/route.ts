@@ -1,36 +1,53 @@
+
 import { NextRequest, NextResponse } from 'next/server'
+import { getSession } from '@/lib/auth'
 import { userDb, productDb } from '@/lib/db'
-import { requireRole } from '@/lib/auth'
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    await requireRole(['admin'])
-    
-    const users = await userDb.getAll()
-    const sellers = users.filter(user => user.role === 'seller')
-    
-    // Get product counts for each seller
-    const sellersWithStats = await Promise.all(
-      sellers.map(async (seller) => {
-        const products = await productDb.findByMerchant(seller.id)
-        return {
-          id: seller.id,
-          email: seller.email,
-          is_verified: seller.is_verified,
-          createdAt: seller.createdAt,
-          productCount: products.length,
-          recentActivity: products.length > 0 
-            ? `Last product: ${new Date(Math.max(...products.map(p => new Date(p.createdAt).getTime()))).toLocaleDateString()}`
-            : 'No products yet'
-        }
-      })
-    )
+    const session = await getSession()
+    if (!session || session.role !== 'admin') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
-    return NextResponse.json(sellersWithStats)
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || 'Failed to fetch merchants' },
-      { status: 500 }
-    )
+    const unverifiedSellers = await userDb.getUnverifiedSellers()
+    return NextResponse.json({ sellers: unverifiedSellers })
+  } catch (error) {
+    console.error('Failed to get merchants:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const session = await getSession()
+    if (!session || session.role !== 'admin') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { sellerId, action, reason } = await request.json()
+
+    if (action === 'verify') {
+      await userDb.verify(sellerId)
+      return NextResponse.json({ success: true, message: 'Seller verified successfully' })
+    }
+
+    if (action === 'reject') {
+      // Suspend the seller account instead of deleting
+      await userDb.suspend(sellerId)
+      
+      // Optionally hide their products
+      const sellerProducts = await productDb.getBySeller(sellerId)
+      for (const product of sellerProducts) {
+        await productDb.update(product.id, { status: 'inactive' })
+      }
+      
+      return NextResponse.json({ success: true, message: 'Seller rejected and suspended' })
+    }
+
+    return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
+  } catch (error) {
+    console.error('Failed to update merchant:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

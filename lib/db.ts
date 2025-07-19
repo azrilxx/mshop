@@ -1,4 +1,3 @@
-
 // Ensure fetch is available for Replit DB in Node.js environment
 if (typeof globalThis.fetch === 'undefined') {
   const fetch = require('node-fetch')
@@ -172,6 +171,73 @@ export interface Insight {
   readTime: number
 }
 
+export interface Category {
+  id: string
+  name: string
+  description?: string
+  imageUrl?: string
+  archived?: boolean
+}
+
+export interface Report {
+  id: string
+  productId: string
+  reporterId: string
+  category: string
+  description: string
+  contact?: string
+  status: 'pending' | 'reviewed' | 'resolved'
+  createdAt: string
+  reviewedAt?: string
+  adminNotes?: string
+}
+
+export const reportDb = {
+  async create(report: Omit<Report, 'id' | 'createdAt'>): Promise<Report> {
+    const newReport: Report = {
+      ...report,
+      id: uuidv4(),
+      createdAt: new Date().toISOString(),
+      status: 'pending'
+    }
+    await db.set(`report:${report.productId}:${newReport.id}`, newReport)
+    return newReport
+  },
+
+  async getByProduct(productId: string): Promise<Report[]> {
+    const keys = await db.list(`report:${productId}:`)
+    const reports: Report[] = []
+
+    for (const key of keys) {
+      const report = await db.get(key)
+      if (report) reports.push(report as Report)
+    }
+
+    return reports.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  },
+
+  async getAll(): Promise<Report[]> {
+    const keys = await db.list('report:')
+    const reports: Report[] = []
+
+    for (const key of keys) {
+      const report = await db.get(key)
+      if (report) reports.push(report as Report)
+    }
+
+    return reports.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  },
+
+  async update(productId: string, reportId: string, updates: Partial<Report>): Promise<Report | null> {
+    const report = await db.get(`report:${productId}:${reportId}`) as Report
+    if (!report) return null
+
+    const updatedReport = { ...report, ...updates }
+    await db.set(`report:${productId}:${reportId}`, updatedReport)
+    return updatedReport
+  }
+}
+
 export const userDb = {
   async create(email: string, password: string, role: 'buyer' | 'seller' | 'admin'): Promise<User> {
     const existingUser = await db.get(`user:${email}`)
@@ -267,6 +333,32 @@ export const userDb = {
       const updatedBookmarks = bookmarks.filter(id => id !== productId)
       await this.updateUser(user.email, { bookmarks: updatedBookmarks })
     }
+  },
+
+  async verify(email: string): Promise<void> {
+    const user = await this.findByEmail(email)
+    if (user) {
+      await this.updateUser(email, { is_verified: true })
+    }
+  },
+
+  async suspend(email: string): Promise<void> {
+    const user = await this.findByEmail(email)
+    if (user) {
+      await this.updateUser(email, { status: 'suspended' })
+    }
+  },
+
+  async activate(email: string): Promise<void> {
+    const user = await this.findByEmail(email)
+    if (user) {
+      await this.updateUser(email, { status: 'active' })
+    }
+  },
+
+  async getUnverifiedSellers(): Promise<User[]> {
+    const users = await this.getAll()
+    return users.filter(user => user.role === 'seller' && !user.is_verified)
   }
 }
 
@@ -292,21 +384,21 @@ export const productDb = {
   async findByMerchant(merchantId: string): Promise<Product[]> {
     const keys = await db.list('product:')
     const products: Product[] = []
-    
+
     for (const key of keys) {
       const product = await db.get(key)
       if (product && (product as Product).merchantId === merchantId) {
         products.push(product as Product)
       }
     }
-    
+
     return products
   },
 
   async getAll(): Promise<Product[]> {
     const keys = await db.list('product:')
     const products: Product[] = []
-    
+
     for (const key of keys) {
       const product = await db.get(key)
       if (product && (product as Product).status === 'active') {
@@ -317,14 +409,14 @@ export const productDb = {
         }
       }
     }
-    
+
     return products
   },
 
   async getAllForPublic(): Promise<Product[]> {
     const keys = await db.list('product:')
     const products: Product[] = []
-    
+
     for (const key of keys) {
       const product = await db.get(key)
       if (product && (product as Product).status === 'active') {
@@ -335,7 +427,7 @@ export const productDb = {
         }
       }
     }
-    
+
     return products
   },
 
@@ -384,33 +476,33 @@ export const rfqDb = {
   async getByProduct(productId: string): Promise<RFQ[]> {
     const keys = await db.list(`rfq:${productId}:`)
     const rfqs: RFQ[] = []
-    
+
     for (const key of keys) {
       const rfq = await db.get(key)
       if (rfq) rfqs.push(rfq as RFQ)
     }
-    
+
     return rfqs.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
   },
 
   async getByBuyer(buyerId: string): Promise<RFQ[]> {
     const keys = await db.list('rfq:')
     const rfqs: RFQ[] = []
-    
+
     for (const key of keys) {
       const rfq = await db.get(key) as RFQ
       if (rfq && rfq.buyerId === buyerId) {
         rfqs.push(rfq)
       }
     }
-    
+
     return rfqs.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
   },
 
   async getBySeller(sellerId: string): Promise<RFQ[]> {
     const keys = await db.list('rfq:')
     const rfqs: RFQ[] = []
-    
+
     for (const key of keys) {
       const rfq = await db.get(key) as RFQ
       if (rfq) {
@@ -420,7 +512,7 @@ export const rfqDb = {
         }
       }
     }
-    
+
     return rfqs.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
   },
 
@@ -454,26 +546,26 @@ export const orderDb = {
   async findByBuyer(buyerId: string): Promise<Order[]> {
     const keys = await db.list('order:')
     const orders: Order[] = []
-    
+
     for (const key of keys) {
       const order = await db.get(key)
       if (order && (order as Order).buyerId === buyerId) {
         orders.push(order as Order)
       }
     }
-    
+
     return orders
   },
 
   async getAll(): Promise<Order[]> {
     const keys = await db.list('order:')
     const orders: Order[] = []
-    
+
     for (const key of keys) {
       const order = await db.get(key)
       if (order) orders.push(order as Order)
     }
-    
+
     return orders
   },
 
@@ -489,7 +581,7 @@ export const orderDb = {
   async findBySeller(sellerId: string): Promise<Order[]> {
     const keys = await db.list('order:')
     const orders: Order[] = []
-    
+
     for (const key of keys) {
       const order = await db.get(key) as Order
       if (order) {
@@ -497,17 +589,17 @@ export const orderDb = {
         const products = await Promise.all(
           order.productIds.map(id => productDb.findById(id))
         )
-        
+
         const hasSellerProducts = products.some(product => 
           product && product.merchantId === sellerId
         )
-        
+
         if (hasSellerProducts) {
           orders.push(order)
         }
       }
     }
-    
+
     return orders
   }
 }
@@ -526,13 +618,13 @@ export const cartDb = {
   async addItem(userId: string, productId: string, quantity: number = 1): Promise<void> {
     const cart = await this.get(userId)
     const existingItem = cart.items.find(item => item.productId === productId)
-    
+
     if (existingItem) {
       existingItem.quantity += quantity
     } else {
       cart.items.push({ productId, quantity })
     }
-    
+
     await this.update(userId, cart)
   },
 
@@ -550,7 +642,7 @@ export const cartDb = {
     const keys = await db.list('cart:')
     const abandonedCarts: { userId: string, cart: Cart }[] = []
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
-    
+
     for (const key of keys) {
       const cart = await db.get(key) as Cart
       if (cart && cart.items.length > 0 && !cart.reminderSent) {
@@ -561,7 +653,7 @@ export const cartDb = {
         }
       }
     }
-    
+
     return abandonedCarts
   }
 }
@@ -638,14 +730,14 @@ export const adDb = {
   async findBySeller(sellerId: string): Promise<Advertisement[]> {
     const keys = await db.list('ad:')
     const ads: Advertisement[] = []
-    
+
     for (const key of keys) {
       const ad = await db.get(key)
       if (ad && (ad as Advertisement).sellerId === sellerId) {
         ads.push(ad as Advertisement)
       }
     }
-    
+
     return ads
   },
 
@@ -653,7 +745,7 @@ export const adDb = {
     const keys = await db.list('ad:')
     const ads: Advertisement[] = []
     const now = new Date()
-    
+
     for (const key of keys) {
       const ad = await db.get(key) as Advertisement
       if (ad && ad.status === 'active' && 
@@ -662,7 +754,7 @@ export const adDb = {
         ads.push(ad)
       }
     }
-    
+
     return ads
   },
 
@@ -701,7 +793,7 @@ export const verificationDb = {
     if (updates.status && updates.status !== 'pending') {
       updatedVerification.reviewedAt = new Date().toISOString()
     }
-    
+
     await db.set(`verification:${userId}`, updatedVerification)
     return updatedVerification
   },
@@ -709,12 +801,12 @@ export const verificationDb = {
   async getAll(): Promise<SellerVerification[]> {
     const keys = await db.list('verification:')
     const verifications: SellerVerification[] = []
-    
+
     for (const key of keys) {
       const verification = await db.get(key)
       if (verification) verifications.push(verification as SellerVerification)
     }
-    
+
     return verifications
   }
 }
@@ -738,25 +830,25 @@ export const ratingDb = {
   async getByProduct(productId: string): Promise<ProductRating[]> {
     const keys = await db.list(`rating:${productId}:`)
     const ratings: ProductRating[] = []
-    
+
     for (const key of keys) {
       const rating = await db.get(key)
       if (rating) ratings.push(rating as ProductRating)
     }
-    
+
     return ratings
   },
 
   async getAverageRating(productId: string): Promise<{ average: number, count: number }> {
     const ratings = await this.getByProduct(productId)
-    
+
     if (ratings.length === 0) {
       return { average: 0, count: 0 }
     }
-    
+
     const sum = ratings.reduce((acc, rating) => acc + rating.rating, 0)
     const average = sum / ratings.length
-    
+
     return { average: Number(average.toFixed(1)), count: ratings.length }
   }
 }
@@ -777,14 +869,14 @@ export const commentDb = {
   async getByProduct(productId: string): Promise<Comment[]> {
     const keys = await db.list(`comment:`)
     const comments: Comment[] = []
-    
+
     for (const key of keys) {
       const comment = await db.get(key)
       if (comment && (comment as Comment).productId === productId) {
         comments.push(comment as Comment)
       }
     }
-    
+
     // Sort by creation date, newest first
     return comments.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
   },
@@ -792,14 +884,14 @@ export const commentDb = {
   async getReplies(parentId: string): Promise<Comment[]> {
     const keys = await db.list(`comment:`)
     const replies: Comment[] = []
-    
+
     for (const key of keys) {
       const comment = await db.get(key) as Comment
       if (comment && comment.parentId === parentId) {
         replies.push(comment)
       }
     }
-    
+
     // Sort by creation date, oldest first for replies
     return replies.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
   },
@@ -813,7 +905,7 @@ export const commentDb = {
       ...updates, 
       updatedAt: new Date().toISOString() 
     }
-    
+
     await db.set(`comment:${id}`, updatedComment)
     return updatedComment
   },
@@ -827,7 +919,7 @@ export const commentDb = {
     for (const reply of replies) {
       await db.delete(`comment:${reply.id}`)
     }
-    
+
     await db.delete(`comment:${id}`)
     return true
   }
@@ -848,21 +940,21 @@ export const quoteDb = {
   async getByProduct(productId: string): Promise<Quote[]> {
     const keys = await db.list('quote:')
     const quotes: Quote[] = []
-    
+
     for (const key of keys) {
       const quote = await db.get(key)
       if (quote && (quote as Quote).productId === productId) {
         quotes.push(quote as Quote)
       }
     }
-    
+
     return quotes.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
   },
 
   async getBySeller(sellerId: string): Promise<Quote[]> {
     const keys = await db.list('quote:')
     const quotes: Quote[] = []
-    
+
     for (const key of keys) {
       const quote = await db.get(key) as Quote
       if (quote) {
@@ -872,7 +964,7 @@ export const quoteDb = {
         }
       }
     }
-    
+
     return quotes.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
   }
 }
@@ -912,12 +1004,12 @@ export const insightDb = {
   async getAll(): Promise<Insight[]> {
     const keys = await db.list('insight:')
     const insights: Insight[] = []
-    
+
     for (const key of keys) {
       const insight = await db.get(key)
       if (insight) insights.push(insight as Insight)
     }
-    
+
     return insights.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
   },
 
@@ -962,29 +1054,36 @@ export const serviceDb = {
   async getAll(): Promise<Service[]> {
     const keys = await db.list('service:')
     const services: Service[] = []
-    
+
     for (const key of keys) {
       const service = await db.get(key)
       if (service && (service as Service).status === 'active') {
         services.push(service as Service)
       }
     }
-    
+
     return services.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
   },
 
   async findByProvider(providerId: string): Promise<Service[]> {
     const keys = await db.list('service:')
     const services: Service[] = []
-    
+
     for (const key of keys) {
       const service = await db.get(key)
       if (service && (service as Service).providerId === providerId) {
         services.push(service as Service)
       }
     }
-    
+
     return services.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  },
+
+  async archive(id: string): Promise<void> {
+    const service = await this.findById(id)
+    if (service) {
+      await db.delete(`service:${id}`)
+    }
   }
 }
 
@@ -992,7 +1091,7 @@ export const serviceDb = {
 export async function initializeSampleData() {
   // Check if insights already exist
   const existingInsights = await insightDb.getAll()
-  
+
   if (existingInsights.length === 0) {
     const sampleInsights = [
       {
@@ -1018,7 +1117,7 @@ export async function initializeSampleData() {
         readTime: 4
       }
     ]
-    
+
     for (const insight of sampleInsights) {
       try {
         await insightDb.create(insight)

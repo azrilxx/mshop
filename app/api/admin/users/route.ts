@@ -1,49 +1,50 @@
+
 import { NextRequest, NextResponse } from 'next/server'
+import { getSession } from '@/lib/auth'
 import { userDb } from '@/lib/db'
-import { requireRole } from '@/lib/auth'
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    await requireRole(['admin'])
-    const users = await userDb.getAll()
-    
-    // Remove password hashes from response
-    const safeUsers = users.map(user => ({
-      id: user.id,
-      email: user.email,
-      role: user.role,
-      is_verified: user.is_verified,
-      createdAt: user.createdAt
-    }))
+    const session = await getSession()
+    if (!session || session.role !== 'admin') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
-    return NextResponse.json(safeUsers)
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || 'Failed to fetch users' },
-      { status: 500 }
-    )
+    const users = await userDb.getAll()
+    return NextResponse.json({ 
+      users: users.map(user => ({
+        ...user,
+        password: undefined // Don't send passwords
+      }))
+    })
+  } catch (error) {
+    console.error('Failed to get users:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
 export async function PATCH(request: NextRequest) {
   try {
-    await requireRole(['admin'])
-    const { email, is_verified } = await request.json()
-
-    if (!email || typeof is_verified !== 'boolean') {
-      return NextResponse.json(
-        { error: 'Email and verification status are required' },
-        { status: 400 }
-      )
+    const session = await getSession()
+    if (!session || session.role !== 'admin') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    await userDb.updateVerificationStatus(email, is_verified)
+    const { userId, action } = await request.json()
 
-    return NextResponse.json({ message: 'User verification status updated' })
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || 'Failed to update user' },
-      { status: 500 }
-    )
+    if (action === 'suspend') {
+      await userDb.suspend(userId)
+      return NextResponse.json({ success: true, message: 'User suspended successfully' })
+    }
+
+    if (action === 'activate') {
+      await userDb.activate(userId)
+      return NextResponse.json({ success: true, message: 'User activated successfully' })
+    }
+
+    return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
+  } catch (error) {
+    console.error('Failed to update user:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

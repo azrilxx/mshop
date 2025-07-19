@@ -12,6 +12,9 @@ interface Product {
   images: string[]
   merchantId: string
   tags?: string[]
+  sellerName?: string
+  sellerVerified?: boolean
+  stock?: number
 }
 
 interface ProductCardProps {

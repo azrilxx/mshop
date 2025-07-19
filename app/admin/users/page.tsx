@@ -1,142 +1,180 @@
+
 'use client'
 
-import { useState, useEffect } from 'react'
-import Link from 'next/link'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { getSession } from '@/lib/auth'
+import { userDb, type User } from '@/lib/db'
 
-interface User {
-  id: string
-  email: string
-  role: string
-  is_verified: boolean
-  createdAt: string
-}
-
-export default function AdminUsersPage() {
+export default function UsersPage() {
+  const [session, setSession] = useState<any>(null)
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const router = useRouter()
 
   useEffect(() => {
-    fetchUsers()
+    checkAuth()
   }, [])
 
-  const fetchUsers = async () => {
+  const checkAuth = async () => {
     try {
-      const response = await fetch('/api/admin/users')
-      if (!response.ok) {
-        throw new Error('Failed to fetch users')
+      const userSession = await getSession()
+      if (!userSession || userSession.role !== 'admin') {
+        router.push('/login')
+        return
       }
-      const data = await response.json()
-      setUsers(data)
-    } catch (err: any) {
-      setError(err.message)
+      setSession(userSession)
+      await loadUsers()
+    } catch (error) {
+      console.error('Auth check failed:', error)
+      router.push('/login')
+    }
+  }
+
+  const loadUsers = async () => {
+    try {
+      const allUsers = await userDb.getAll()
+      setUsers(allUsers.filter(user => user.role !== 'admin')) // Don't show other admins
+    } catch (error) {
+      console.error('Failed to load users:', error)
     } finally {
       setLoading(false)
     }
   }
 
-  const toggleVerification = async (email: string, currentStatus: boolean) => {
+  const handleSuspend = async (userId: string) => {
+    if (!confirm('Are you sure you want to suspend this account?')) return
+    
     try {
-      const response = await fetch('/api/admin/users', {
+      await fetch('/api/admin/users', {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email,
-          is_verified: !currentStatus
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, action: 'suspend' })
       })
+      await loadUsers()
+    } catch (error) {
+      console.error('Failed to suspend user:', error)
+    }
+  }
 
-      if (!response.ok) {
-        throw new Error('Failed to update user')
-      }
+  const handleActivate = async (userId: string) => {
+    try {
+      await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, action: 'activate' })
+      })
+      await loadUsers()
+    } catch (error) {
+      console.error('Failed to activate user:', error)
+    }
+  }
 
-      // Update local state
-      setUsers(users.map(user => 
-        user.email === email 
-          ? { ...user, is_verified: !currentStatus }
-          : user
-      ))
-    } catch (err: any) {
-      setError(err.message)
+  const getRoleColor = (role: string) => {
+    switch (role) {
+      case 'seller': return 'bg-blue-100 text-blue-800'
+      case 'buyer': return 'bg-green-100 text-green-800'
+      default: return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  const getStatusColor = (status?: string) => {
+    switch (status) {
+      case 'suspended': return 'bg-red-100 text-red-800'
+      case 'active': return 'bg-green-100 text-green-800'
+      default: return 'bg-gray-100 text-gray-800'
     }
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-600">Loading users...</div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-lg">Loading...</div>
       </div>
     )
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          <div className="mb-6">
-            <Link href="/admin" className="text-blue-600 hover:text-blue-800">
-              ← Back to Admin Panel
-            </Link>
-          </div>
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
+          <p className="text-gray-600 mt-2">Manage user accounts and permissions</p>
+        </div>
 
-          <h1 className="text-3xl font-bold text-gray-900 mb-6">User Management</h1>
-
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
-              <div className="text-red-700">{error}</div>
-            </div>
-          )}
-
-          <div className="bg-white shadow overflow-hidden sm:rounded-md">
-            <ul className="divide-y divide-gray-200">
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  User
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Role
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Joined
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Last Login
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
               {users.map((user) => (
-                <li key={user.id} className="px-6 py-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0 h-10 w-10">
-                        <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
-                          <span className="text-sm font-medium text-gray-700">
-                            {user.email.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">{user.email}</div>
-                        <div className="text-sm text-gray-500">
-                          {user.role} • Joined {new Date(user.createdAt).toLocaleDateString()}
-                        </div>
-                      </div>
+                <tr key={user.id}>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                      <div className="text-sm text-gray-500">{user.email}</div>
                     </div>
-                    
-                    <div className="flex items-center space-x-4">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        user.is_verified 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {user.is_verified ? 'Verified' : 'Pending'}
-                      </span>
-                      
-                      {user.role === 'seller' && (
-                        <button
-                          onClick={() => toggleVerification(user.email, user.is_verified)}
-                          className={`px-3 py-1 text-sm rounded-md ${
-                            user.is_verified
-                              ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                              : 'bg-green-100 text-green-700 hover:bg-green-200'
-                          }`}
-                        >
-                          {user.is_verified ? 'Revoke' : 'Verify'}
-                        </button>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRoleColor(user.role)}`}>
+                      {user.role}
+                      {user.role === 'seller' && user.is_verified && (
+                        <span className="ml-1 text-green-500">✓</span>
                       )}
-                    </div>
-                  </div>
-                </li>
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(user.status)}`}>
+                      {user.status || 'active'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {new Date(user.createdAt).toLocaleDateString()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    {user.status === 'suspended' ? (
+                      <button
+                        onClick={() => handleActivate(user.id)}
+                        className="text-green-600 hover:text-green-900"
+                      >
+                        Activate
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleSuspend(user.id)}
+                        className="text-red-600 hover:text-red-900"
+                      >
+                        Suspend
+                      </button>
+                    )}
+                  </td>
+                </tr>
               ))}
-            </ul>
-          </div>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

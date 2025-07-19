@@ -1,52 +1,56 @@
 
-import { NextResponse } from 'next/server'
-import { requireAuth } from '@/lib/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { getSession } from '@/lib/auth'
+import { userDb, productDb, reportDb } from '@/lib/db'
 import Database from '@replit/database'
 
 const db = new Database(process.env.REPLIT_DB_URL)
 
 export async function GET() {
   try {
-    const user = await requireAuth()
-    if (!user || user.role !== 'admin') {
+    const session = await getSession()
+    if (!session || session.role !== 'admin') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Count keys for each type
-    const [userKeys, productKeys, rfqKeys] = await Promise.all([
-      db.list('user:'),
-      db.list('product:'),
-      db.list('rfq:')
-    ])
+    // Get all users
+    const users = await userDb.getAll()
+    const buyers = users.filter(user => user.role === 'buyer')
+    const sellers = users.filter(user => user.role === 'seller')
+    const verifiedSellers = sellers.filter(seller => seller.is_verified)
+    const unverifiedSellers = sellers.filter(seller => !seller.is_verified)
+    const suspendedUsers = users.filter(user => user.status === 'suspended')
 
-    // Count buyers and sellers
-    let totalBuyers = 0
-    let totalSellers = 0
+    // Get all products
+    const products = await productDb.getAll()
 
-    for (const key of userKeys) {
-      try {
-        const user = await db.get(key)
-        if (user?.role === 'buyer') totalBuyers++
-        if (user?.role === 'seller') totalSellers++
-      } catch (error) {
-        console.warn(`Failed to get user ${key}:`, error)
-      }
+    // Get all reports
+    const reports = await reportDb.getAll()
+    const pendingReports = reports.filter(report => report.status === 'pending')
+
+    // Count RFQs
+    let totalRFQs = 0
+    try {
+      const rfqKeys = await db.list('rfq:')
+      totalRFQs = rfqKeys.length
+    } catch (error) {
+      console.error('Failed to count RFQs:', error)
     }
 
     const metrics = {
-      totalBuyers,
-      totalSellers,
-      totalProducts: productKeys.length,
-      totalRFQs: rfqKeys.length
+      totalBuyers: buyers.length,
+      totalSellers: sellers.length,
+      totalProducts: products.length,
+      totalRFQs,
+      verifiedSellers: verifiedSellers.length,
+      unverifiedSellers: unverifiedSellers.length,
+      pendingReports: pendingReports.length,
+      suspendedUsers: suspendedUsers.length
     }
 
-    return NextResponse.json(metrics)
-
+    return NextResponse.json({ metrics })
   } catch (error) {
-    console.error('Metrics fetch error:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch metrics' },
-      { status: 500 }
-    )
+    console.error('Failed to get metrics:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
