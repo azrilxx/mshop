@@ -1,159 +1,163 @@
 
 'use client'
 
-import Link from 'next/link'
 import { useState } from 'react'
+import Link from 'next/link'
+import { ChevronDown, Globe, ShoppingCart, User, MapPin, Search, Menu } from 'lucide-react'
 
-interface User {
-  id: string
-  email: string
-  role: string
-}
-
-interface HeaderProps {
-  user: User | null
-}
-
-export default function Header({ user }: HeaderProps) {
-  const [showDropdown, setShowDropdown] = useState(false)
+export default function Header() {
+  const [showSignInDropdown, setShowSignInDropdown] = useState(false)
 
   return (
-    <div className="bg-gray-900 text-white">
-      {/* Top Header Bar */}
-      <div className="bg-gray-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-10 text-sm">
-            {/* Left side - Deliver to */}
-            <div className="flex items-center space-x-2">
-              <span className="text-gray-300">Deliver to:</span>
-              <div className="flex items-center space-x-1">
-                <span className="text-xs">🇲🇾</span>
-                <span className="font-medium">MY</span>
+    <header className="w-full bg-white border-b border-gray-200 sticky top-0 z-50">
+      {/* Top Navigation Bar */}
+      <div className="bg-gray-50 border-b border-gray-200">
+        <div className="max-w-screen-xl mx-auto px-4">
+          <div className="flex items-center justify-between h-10 text-sm">
+            {/* Left Section - Delivery and Language */}
+            <div className="flex items-center space-x-6">
+              <div className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 cursor-pointer">
+                <MapPin className="w-4 h-4" />
+                <span>🇲🇾 MY</span>
+              </div>
+              <div className="flex items-center space-x-1 text-gray-600 hover:text-gray-900 cursor-pointer">
+                <Globe className="w-4 h-4" />
+                <span>English-MYR</span>
+                <ChevronDown className="w-3 h-3" />
               </div>
             </div>
 
-            {/* Right side - Language, Cart, Sign in, Create account */}
+            {/* Right Section - Account and Cart */}
             <div className="flex items-center space-x-6">
-              {/* Language Selector */}
-              <div className="flex items-center space-x-2">
-                <div className="w-5 h-5 rounded-full bg-gray-600 flex items-center justify-center">
-                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM4.332 8.027a6.012 6.012 0 011.912-2.706C6.512 5.73 6.974 6 7.5 6A1.5 1.5 0 019 7.5V8a2 2 0 004 0 2 2 0 011.523-1.943A5.977 5.977 0 0116 10c0 .34-.028.675-.083 1H15a2 2 0 00-2 2v2.197A5.973 5.973 0 0110 16v-2a2 2 0 00-2-2 2 2 0 01-2-2 2 2 0 00-1.668-1.973z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <span>English-MYR</span>
+              <div className="flex items-center space-x-1 text-gray-600 hover:text-gray-900 cursor-pointer">
+                <ShoppingCart className="w-4 h-4" />
+                <span>Cart</span>
               </div>
+              
+              {/* Sign In with Dropdown */}
+              <div 
+                className="relative"
+                onMouseEnter={() => setShowSignInDropdown(true)}
+                onMouseLeave={() => setShowSignInDropdown(false)}
+              >
+                <button 
+                  className="flex items-center space-x-1 text-gray-600 hover:text-gray-900 cursor-pointer"
+                  aria-haspopup="true"
+                  aria-expanded={showSignInDropdown}
+                >
+                  <User className="w-4 h-4" />
+                  <span>Sign In</span>
+                  <ChevronDown className="w-3 h-3" />
+                </button>
 
-              {/* Cart */}
-              <Link href="/cart" className="hover:text-gray-300">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.5 6H19" />
-                </svg>
-              </Link>
+                {/* Dropdown Menu */}
+                {showSignInDropdown && (
+                  <div className="absolute top-full right-0 mt-1 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                    <div className="p-6">
+                      {/* Sign In CTA */}
+                      <div className="mb-4">
+                        <Link 
+                          href="/login"
+                          className="flex items-center justify-center w-full bg-orange-500 text-white py-3 rounded-md hover:bg-orange-600 transition-colors font-medium"
+                        >
+                          🔒 Sign In
+                        </Link>
+                      </div>
 
-              {/* User Section */}
-              {user ? (
-                <div className="flex items-center space-x-4">
-                  <div className="flex items-center space-x-2">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                    <span>{user.email}</span>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center space-x-4">
-                  {/* Sign in with Dropdown */}
-                  <div 
-                    className="relative"
-                    onMouseEnter={() => setShowDropdown(true)}
-                    onMouseLeave={() => setShowDropdown(false)}
-                  >
-                    <button className="flex items-center space-x-2 hover:text-gray-300">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
-                      <span>Sign in</span>
-                    </button>
-
-                    {/* Dropdown */}
-                    {showDropdown && (
-                      <div className="absolute top-full right-0 z-50 mt-2 w-72 bg-white rounded-lg shadow-lg text-gray-900 border">
-                        <div className="p-4">
-                          {/* Sign In CTA */}
-                          <Link 
-                            href="/login"
-                            className="block w-full bg-orange-500 text-white text-center py-2 px-4 rounded-md font-medium hover:bg-orange-600 mb-4"
-                          >
-                            🔒 Sign In
-                          </Link>
-
-                          {/* Social Login Buttons */}
-                          <div className="space-y-2 mb-4">
-                            <button className="w-full flex items-center justify-center space-x-2 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700">
-                              <span>f</span>
-                              <span>Continue with Facebook</span>
-                            </button>
-                            <button className="w-full flex items-center justify-center space-x-2 bg-red-500 text-white py-2 px-4 rounded-md hover:bg-red-600">
-                              <span>G</span>
-                              <span>Continue with Google</span>
-                            </button>
-                            <button className="w-full flex items-center justify-center space-x-2 bg-blue-700 text-white py-2 px-4 rounded-md hover:bg-blue-800">
-                              <span>in</span>
-                              <span>Continue with LinkedIn</span>
-                            </button>
-                          </div>
-
-                          {/* Navigation Links */}
-                          <div className="border-t pt-4 space-y-2 text-sm">
-                            <Link href="/account" className="block hover:text-orange-500">My Account</Link>
-                            <Link href="/orders" className="block hover:text-orange-500">Orders</Link>
-                            <Link href="/messages" className="block hover:text-orange-500">Messages</Link>
-                            <Link href="/rfqs" className="block hover:text-orange-500">RFQs</Link>
-                            <Link href="/favorites" className="block hover:text-orange-500">Favorites</Link>
-                            <Link href="/membership" className="block hover:text-orange-500">Membership Program</Link>
-                          </div>
+                      {/* Social Login */}
+                      <div className="mb-4">
+                        <p className="text-gray-600 text-sm mb-3">Or sign in with:</p>
+                        <div className="flex space-x-2">
+                          <button className="flex-1 flex items-center justify-center py-2 border border-gray-300 rounded hover:bg-gray-50 transition-colors">
+                            <span className="text-blue-600 font-semibold text-sm">Facebook</span>
+                          </button>
+                          <button className="flex-1 flex items-center justify-center py-2 border border-gray-300 rounded hover:bg-gray-50 transition-colors">
+                            <span className="text-red-500 font-semibold text-sm">Google</span>
+                          </button>
+                          <button className="flex-1 flex items-center justify-center py-2 border border-gray-300 rounded hover:bg-gray-50 transition-colors">
+                            <span className="text-blue-700 font-semibold text-sm">LinkedIn</span>
+                          </button>
                         </div>
                       </div>
-                    )}
-                  </div>
 
-                  {/* Create account button */}
-                  <Link 
-                    href="/register"
-                    className="bg-orange-500 text-white px-4 py-1.5 rounded-full hover:bg-orange-600 font-medium transition-colors"
-                  >
-                    Create account
-                  </Link>
-                </div>
-              )}
+                      {/* Quick Links */}
+                      <div className="border-t border-gray-100 pt-4">
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <Link href="/dashboard" className="text-gray-600 hover:text-orange-500 py-1">My Account</Link>
+                          <Link href="/orders" className="text-gray-600 hover:text-orange-500 py-1">Orders</Link>
+                          <Link href="/messages" className="text-gray-600 hover:text-orange-500 py-1">Messages</Link>
+                          <Link href="/rfqs" className="text-gray-600 hover:text-orange-500 py-1">RFQs</Link>
+                          <Link href="/favorites" className="text-gray-600 hover:text-orange-500 py-1">Favorites</Link>
+                          <Link href="/membership" className="text-gray-600 hover:text-orange-500 py-1">Membership Program</Link>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <Link 
+                href="/register"
+                className="bg-orange-500 text-white px-4 py-1.5 rounded hover:bg-orange-600 transition-colors font-medium"
+              >
+                Create account
+              </Link>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Bottom Navigation Bar */}
-      <div className="bg-gray-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-center space-x-8 h-12 text-sm">
-            <Link href="/ai-sourcing" className="hover:text-orange-400 transition-colors">
-              AI sourcing agent
-            </Link>
-            <Link href="/buyer-central" className="hover:text-orange-400 transition-colors">
-              Buyer Central
-            </Link>
-            <Link href="/help" className="hover:text-orange-400 transition-colors">
-              Help Center
-            </Link>
-            <Link href="/app" className="hover:text-orange-400 transition-colors">
-              App & extension
-            </Link>
-            <Link href="/become-supplier" className="hover:text-orange-400 transition-colors">
-              Become a supplier
-            </Link>
+      {/* Main Navigation Bar */}
+      <div className="bg-white">
+        <div className="max-w-screen-xl mx-auto px-4">
+          <div className="flex items-center justify-between h-16">
+            {/* Logo */}
+            <div className="flex items-center">
+              <Link href="/" className="text-2xl font-bold text-orange-500">
+                Muvex
+              </Link>
+            </div>
+
+            {/* Center Navigation Links */}
+            <nav className="hidden lg:flex items-center space-x-8">
+              <Link href="/ai-sourcing" className="text-gray-600 hover:text-orange-500 transition-colors">
+                AI sourcing agent
+              </Link>
+              <Link href="/buyer-central" className="text-gray-600 hover:text-orange-500 transition-colors">
+                Buyer Central
+              </Link>
+              <Link href="/help" className="text-gray-600 hover:text-orange-500 transition-colors">
+                Help Center
+              </Link>
+              <Link href="/app-extension" className="text-gray-600 hover:text-orange-500 transition-colors">
+                App & Extension
+              </Link>
+              <Link href="/register?type=supplier" className="text-gray-600 hover:text-orange-500 transition-colors">
+                Become a supplier
+              </Link>
+            </nav>
+
+            {/* Search Bar */}
+            <div className="hidden md:flex flex-1 max-w-md ml-8">
+              <div className="relative w-full">
+                <input
+                  type="text"
+                  placeholder="What are you looking for..."
+                  className="w-full pl-4 pr-12 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                />
+                <button className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-orange-500">
+                  <Search className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Mobile Menu Button */}
+            <button className="lg:hidden p-2 text-gray-600 hover:text-gray-900">
+              <Menu className="w-6 h-6" />
+            </button>
           </div>
         </div>
       </div>
-    </div>
+    </header>
   )
 }
