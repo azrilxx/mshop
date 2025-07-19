@@ -174,6 +174,68 @@ export default async function LandingPage() {
         </div>
       </section>
 
+      {/* Source Direct-from-Factory Section */}
+      <section className="py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-4">
+          <h2 className="text-3xl font-bold text-gray-900 mb-12">Source direct-from-factory</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Factory Tours Card */}
+            <div className="relative group cursor-pointer rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300">
+              <div className="relative h-64 bg-cover bg-center" style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1581094794329-c8112a89af12?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80)' }}>
+                <div className="absolute inset-0 bg-black bg-opacity-40"></div>
+                <div className="absolute top-4 left-4">
+                  <div className="bg-orange-500 text-white px-3 py-1 rounded-full text-sm font-medium flex items-center space-x-2">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M2 6a2 2 0 012-2h6l2 2h6a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM5 8a1 1 0 000 2h8a1 1 0 100-2H5z"/>
+                    </svg>
+                    <span>Take facility live tours</span>
+                  </div>
+                </div>
+                <div className="absolute bottom-4 left-4">
+                  <button className="bg-white bg-opacity-90 text-gray-900 px-4 py-2 rounded-lg font-medium hover:bg-white transition-colors">
+                    View LIVE
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Get Samples Card */}
+            <div className="relative group cursor-pointer rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300">
+              <div className="relative h-64 bg-cover bg-center" style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1518709268805-4e9042af2176?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80)' }}>
+                <div className="absolute inset-0 bg-black bg-opacity-30"></div>
+                <div className="absolute top-4 left-4">
+                  <div className="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-medium">
+                    Get samples
+                  </div>
+                </div>
+                <div className="absolute bottom-4 left-4">
+                  <button className="bg-white bg-opacity-90 text-gray-900 px-4 py-2 rounded-lg font-medium hover:bg-white transition-colors">
+                    View more
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Connect with Manufacturers Card */}
+            <div className="relative group cursor-pointer rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300">
+              <div className="relative h-64 bg-cover bg-center" style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80)' }}>
+                <div className="absolute inset-0 bg-black bg-opacity-40"></div>
+                <div className="absolute top-4 left-4">
+                  <div className="bg-gray-800 text-white px-3 py-1 rounded-full text-sm font-medium">
+                    Connect with top-ranking manufacturers
+                  </div>
+                </div>
+                <div className="absolute bottom-4 left-4">
+                  <button className="bg-white bg-opacity-90 text-gray-900 px-4 py-2 rounded-lg font-medium hover:bg-white transition-colors">
+                    View more
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Categories Grid */}
       <section className="py-16 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4">
