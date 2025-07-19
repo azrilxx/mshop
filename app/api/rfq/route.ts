@@ -48,7 +48,10 @@ export async function POST(request: Request) {
 
     // Send notification to seller
     try {
+      const whatsappMessage = `New quote request for ${product.name}\n\nFrom: ${name} (${email})\nQuantity: ${quantity}\nRegion: ${region}\n\nMessage: ${message}`
+      
       if (seller.whatsappNumber) {
+        // WhatsApp notification will be handled on the client side
         console.log('WhatsApp notification available for seller:', seller.whatsappNumber)
       }
 
@@ -100,6 +103,53 @@ export async function POST(request: Request) {
     console.error('RFQ submission error:', error)
     return NextResponse.json(
       { error: 'Failed to submit quote request' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function GET(request: Request) {
+  try {
+    const session = await getSession()
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { searchParams } = new URL(request.url)
+    const productId = searchParams.get('productId')
+    const buyerId = searchParams.get('buyerId')
+
+    let rfqs = []
+
+    if (productId) {
+      // Get RFQs for a specific product (seller view)
+      const product = await productDb.findById(productId)
+      if (!product || product.merchantId !== session.user.id) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+      rfqs = await rfqDb.getByProduct(productId)
+    } else if (buyerId) {
+      // Get RFQs by buyer (buyer view)
+      if (session.user.id !== buyerId && session.user.role !== 'admin') {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+      rfqs = await rfqDb.getByBuyer(buyerId)
+    } else if (session.user.role === 'seller') {
+      // Get all RFQs for seller's products
+      rfqs = await rfqDb.getBySeller(session.user.id)
+    } else if (session.user.role === 'buyer') {
+      // Get buyer's own RFQs
+      rfqs = await rfqDb.getByBuyer(session.user.id)
+    } else {
+      return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
+    }
+
+    return NextResponse.json(rfqs)
+
+  } catch (error) {
+    console.error('Get RFQs error:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch RFQs' },
       { status: 500 }
     )
   }

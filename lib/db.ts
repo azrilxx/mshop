@@ -1,12 +1,20 @@
-import Database from '@replit/database'
-import bcrypt from 'bcryptjs'
-import { v4 as uuidv4 } from 'uuid'
 
 // Ensure fetch is available for Replit DB in Node.js environment
 if (typeof globalThis.fetch === 'undefined') {
+  const fetch = require('node-fetch')
   // @ts-ignore
-  globalThis.fetch = require('node-fetch')
+  globalThis.fetch = fetch
+  // @ts-ignore
+  globalThis.Headers = fetch.Headers
+  // @ts-ignore
+  globalThis.Request = fetch.Request
+  // @ts-ignore
+  globalThis.Response = fetch.Response
 }
+
+import Database from '@replit/database'
+import bcrypt from 'bcryptjs'
+import { v4 as uuidv4 } from 'uuid'
 
 const db = new Database(process.env.REPLIT_DB_URL)
 
@@ -23,6 +31,13 @@ export interface User {
   twoFactorEnabled?: boolean
   cartNotifiedAt?: string
   whatsappNumber?: string
+  sourcingPreferences?: {
+    sourcing: string
+    region: string
+    budget: string
+    urgency: string
+  }
+  bookmarks?: string[]
 }
 
 export interface Product {
@@ -39,6 +54,19 @@ export interface Product {
   certifications: string[]
   tags: string[]
   createdAt: string
+  specSheetUrl?: string
+}
+
+export interface RFQ {
+  id: string
+  productId: string
+  buyerId: string | null
+  name: string
+  email: string
+  quantity: number
+  region: string
+  message: string
+  submittedAt: string
 }
 
 export interface Order {
@@ -159,7 +187,8 @@ export const userDb = {
       notifyOrder: true,
       notifyStatus: true,
       notifyMarketing: false,
-      twoFactorEnabled: role === 'admin'
+      twoFactorEnabled: role === 'admin',
+      bookmarks: []
     }
 
     await db.set(`user:${email}`, user)
@@ -216,6 +245,26 @@ export const userDb = {
       return updatedUser
     }
     return null
+  },
+
+  async addBookmark(userId: string, productId: string): Promise<void> {
+    const user = await this.findById(userId)
+    if (user) {
+      const bookmarks = user.bookmarks || []
+      if (!bookmarks.includes(productId)) {
+        bookmarks.push(productId)
+        await this.updateUser(user.email, { bookmarks })
+      }
+    }
+  },
+
+  async removeBookmark(userId: string, productId: string): Promise<void> {
+    const user = await this.findById(userId)
+    if (user) {
+      const bookmarks = user.bookmarks || []
+      const updatedBookmarks = bookmarks.filter(id => id !== productId)
+      await this.updateUser(user.email, { bookmarks: updatedBookmarks })
+    }
   }
 }
 
@@ -224,7 +273,8 @@ export const productDb = {
     const newProduct: Product = {
       ...product,
       id: uuidv4(),
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      tags: product.tags || []
     }
 
     await db.set(`product:${newProduct.id}`, newProduct)
@@ -297,6 +347,77 @@ export const productDb = {
     const updatedProduct = { ...product, ...updates }
     await db.set(`product:${id}`, updatedProduct)
     return updatedProduct
+  },
+
+  async getRecommendations(productId: string, limit: number = 4): Promise<Product[]> {
+    const product = await this.findById(productId)
+    if (!product || !product.tags || product.tags.length === 0) {
+      return []
+    }
+
+    const allProducts = await this.getAllForPublic()
+    const recommendations = allProducts
+      .filter(p => p.id !== productId)
+      .filter(p => p.tags && p.tags.some(tag => product.tags.includes(tag)))
+      .slice(0, limit)
+
+    return recommendations
+  }
+}
+
+export const rfqDb = {
+  async create(rfq: Omit<RFQ, 'id' | 'submittedAt'>): Promise<RFQ> {
+    const newRFQ: RFQ = {
+      ...rfq,
+      id: uuidv4(),
+      submittedAt: new Date().toISOString()
+    }
+
+    await db.set(`rfq:${rfq.productId}:${newRFQ.id}`, newRFQ)
+    return newRFQ
+  },
+
+  async getByProduct(productId: string): Promise<RFQ[]> {
+    const keys = await db.list(`rfq:${productId}:`)
+    const rfqs: RFQ[] = []
+    
+    for (const key of keys) {
+      const rfq = await db.get(key)
+      if (rfq) rfqs.push(rfq as RFQ)
+    }
+    
+    return rfqs.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
+  },
+
+  async getByBuyer(buyerId: string): Promise<RFQ[]> {
+    const keys = await db.list('rfq:')
+    const rfqs: RFQ[] = []
+    
+    for (const key of keys) {
+      const rfq = await db.get(key) as RFQ
+      if (rfq && rfq.buyerId === buyerId) {
+        rfqs.push(rfq)
+      }
+    }
+    
+    return rfqs.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
+  },
+
+  async getBySeller(sellerId: string): Promise<RFQ[]> {
+    const keys = await db.list('rfq:')
+    const rfqs: RFQ[] = []
+    
+    for (const key of keys) {
+      const rfq = await db.get(key) as RFQ
+      if (rfq) {
+        const product = await productDb.findById(rfq.productId)
+        if (product && product.merchantId === sellerId) {
+          rfqs.push(rfq)
+        }
+      }
+    }
+    
+    return rfqs.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
   }
 }
 

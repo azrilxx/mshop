@@ -4,8 +4,15 @@ import { landingDb, LandingCategory, LandingProduct } from '@/lib/landingDb'
 
 // Ensure fetch is available for Replit DB in Node.js environment
 if (typeof globalThis.fetch === 'undefined') {
+  const fetch = require('node-fetch')
   // @ts-ignore
-  globalThis.fetch = require('node-fetch')
+  globalThis.fetch = fetch
+  // @ts-ignore
+  globalThis.Headers = fetch.Headers
+  // @ts-ignore
+  globalThis.Request = fetch.Request
+  // @ts-ignore
+  globalThis.Response = fetch.Response
 }
 
 const db = new Database(process.env.REPLIT_DB_URL)

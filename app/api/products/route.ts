@@ -7,6 +7,21 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const merchantId = searchParams.get('merchantId')
     const isPublic = searchParams.get('public') === 'true'
+    const recommendations = searchParams.get('recommendations')
+    const id = searchParams.get('id')
+
+    if (id) {
+      const product = await productDb.findById(id)
+      if (!product) {
+        return NextResponse.json({ error: 'Product not found' }, { status: 404 })
+      }
+      return NextResponse.json([product])
+    }
+
+    if (recommendations) {
+      const recommendedProducts = await productDb.getRecommendations(recommendations, 4)
+      return NextResponse.json(recommendedProducts)
+    }
 
     if (merchantId) {
       // Get products for a specific merchant
