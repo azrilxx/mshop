@@ -1,5 +1,7 @@
 
-import db from './db'
+import Database from '@replit/database'
+
+const db = new Database()
 
 export interface LandingCategory {
   id: string
@@ -10,9 +12,9 @@ export interface LandingCategory {
 export interface LandingProduct {
   id: string
   name: string
-  price: number
+  price: number | null
   imageUrl: string
-  region: string
+  region: string | null
   tags: string[]
   category: string
 }
@@ -33,32 +35,50 @@ export interface CTASection {
 export const landingDb = {
   async getHeroSection(): Promise<HeroSection | null> {
     try {
-      return await db.get('section:hero')
+      const result = await db.get('section:hero')
+      return result || null
     } catch (error) {
       console.error('Failed to get hero section:', error)
-      return null
+      return {
+        title: 'Discover Oil & Gas Equipment. Redefined.',
+        subtitle: 'Connect with verified suppliers worldwide. Advanced equipment for energy operations.',
+        backgroundImage: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80'
+      }
     }
   },
 
   async getCTASection(): Promise<CTASection | null> {
     try {
-      return await db.get('cta:join')
+      const result = await db.get('cta:join')
+      return result || null
     } catch (error) {
       console.error('Failed to get CTA section:', error)
-      return null
+      return {
+        heading: 'Start Selling on Muvex',
+        subheading: 'List your inventory and reach verified buyers today.',
+        buttonLabel: 'Join as Seller',
+        link: '/register'
+      }
     }
   },
 
   async getCategories(): Promise<LandingCategory[]> {
     try {
       const keys = await db.list('category:')
-      const categories = await Promise.all(
-        keys.map(async (key) => {
+      const categories: LandingCategory[] = []
+      
+      for (const key of keys) {
+        try {
           const category = await db.get(key)
-          return category
-        })
-      )
-      return categories.filter(Boolean)
+          if (category) {
+            categories.push(category as LandingCategory)
+          }
+        } catch (error) {
+          console.warn(`Failed to get category ${key}:`, error)
+        }
+      }
+      
+      return categories
     } catch (error) {
       console.error('Failed to get categories:', error)
       return []
@@ -67,17 +87,40 @@ export const landingDb = {
 
   async getFeaturedProducts(): Promise<LandingProduct[]> {
     try {
-      const keys = await db.list('product:')
-      const products = await Promise.all(
-        keys.map(async (key) => {
+      const keys = await db.list('landing:product:')
+      const products: LandingProduct[] = []
+      
+      for (const key of keys) {
+        try {
           const product = await db.get(key)
-          return product
-        })
-      )
-      return products.filter(Boolean)
+          if (product) {
+            products.push(product as LandingProduct)
+          }
+        } catch (error) {
+          console.warn(`Failed to get product ${key}:`, error)
+        }
+      }
+      
+      return products
     } catch (error) {
       console.error('Failed to get featured products:', error)
       return []
+    }
+  },
+
+  async storeCategory(category: LandingCategory): Promise<void> {
+    try {
+      await db.set(`category:${category.id}`, category)
+    } catch (error) {
+      console.error(`Failed to store category ${category.id}:`, error)
+    }
+  },
+
+  async storeProduct(product: LandingProduct): Promise<void> {
+    try {
+      await db.set(`landing:product:${product.id}`, product)
+    } catch (error) {
+      console.error(`Failed to store product ${product.id}:`, error)
     }
   }
 }
