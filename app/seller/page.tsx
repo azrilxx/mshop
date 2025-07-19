@@ -1,19 +1,48 @@
-import { redirect } from 'next/navigation'
+'use client'
+
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { getUser } from '@/lib/auth'
-import { productDb, orderDb, planDb, quoteDb } from '@/lib/db'
+import { useUserPlan } from '@/lib/hooks'
 
-export default async function SellerDashboard() {
-  const user = await getUser()
+export default function SellerDashboard() {
+  const { plan, usage, featureAccess, loading: planLoading } = useUserPlan()
+  const [products, setProducts] = useState<any[]>([])
+  const [orders, setOrders] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
-  if (!user || user.role !== 'seller') {
-    redirect('/login')
+  useEffect(() => {
+    fetchData()
+  }, [])
+
+  const fetchData = async () => {
+    try {
+      const [productsRes, ordersRes] = await Promise.all([
+        fetch('/api/products'),
+        fetch('/api/orders')
+      ])
+
+      if (!productsRes.ok || !ordersRes.ok) {
+        throw new Error('Failed to fetch data')
+      }
+
+      const [productsData, ordersData] = await Promise.all([
+        productsRes.json(),
+        ordersRes.json()
+      ])
+
+      setProducts(productsData)
+      setOrders(ordersData)
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const products = await productDb.findByMerchant(user.id)
-  const orders = await orderDb.findBySeller(user.id)
-  const quotes = await quoteDb.getBySeller(user.id)
-  const plan = await planDb.get(user.id)
+  if (loading || planLoading || !plan || !usage) {
+    return <div>Loading...</div>
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -30,13 +59,13 @@ export default async function SellerDashboard() {
           <div>
             <p className="text-sm text-gray-600">Products Used</p>
             <p className="text-lg font-semibold">
-              {plan.quotaUsed} / {plan.maxProducts === -1 ? '∞' : plan.maxProducts}
+              {usage.product_created} / {plan.maxProducts === -1 ? '∞' : plan.maxProducts}
             </p>
           </div>
           <div>
             <p className="text-sm text-gray-600">Ad Slots Used</p>
             <p className="text-lg font-semibold">
-              {plan.adSlotsUsed} / {plan.maxAdSlots === -1 ? '∞' : plan.maxAdSlots}
+              {usage.ads_created} / {plan.maxAdSlots === -1 ? '∞' : plan.maxAdSlots}
             </p>
           </div>
         </div>
@@ -60,7 +89,7 @@ export default async function SellerDashboard() {
         </div>
         <div className="bg-white rounded-lg shadow-md p-6">
           <h3 className="text-lg font-semibold mb-2">Quote Requests</h3>
-          <p className="text-3xl font-bold text-orange-600">{quotes.length}</p>
+          <p className="text-3xl font-bold text-orange-600">0</p>
         </div>
         <div className="bg-white rounded-lg shadow-md p-6">
           <h3 className="text-lg font-semibold mb-2">Revenue</h3>
@@ -74,13 +103,13 @@ export default async function SellerDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <Link 
           href="/seller/products/create" 
-          className="bg-blue-600 text-white p-4 rounded-lg text-center hover:bg-blue-700"
+          className={`bg-blue-600 text-white p-4 rounded-lg text-center hover:bg-blue-700 ${!featureAccess.createProducts ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
           Add New Product
         </Link>
         <Link 
           href="/seller/ads/create" 
-          className="bg-green-600 text-white p-4 rounded-lg text-center hover:bg-green-700"
+          className={`bg-green-600 text-white p-4 rounded-lg text-center hover:bg-green-700 ${!featureAccess.createAds ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
           Create Advertisement
         </Link>
@@ -106,7 +135,7 @@ export default async function SellerDashboard() {
               Products
             </button>
             <button className="border-b-2 border-transparent py-4 px-1 text-gray-500 hover:text-gray-700">
-              Quotes ({quotes.length})
+              Quotes (0)
             </button>
           </nav>
         </div>
@@ -117,7 +146,7 @@ export default async function SellerDashboard() {
             <h2 className="text-xl font-semibold">Your Products</h2>
             <Link 
               href="/seller/products/create" 
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+              className={`bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 ${!featureAccess.createProducts ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               Add Product
             </Link>
@@ -178,25 +207,12 @@ export default async function SellerDashboard() {
         </div>
 
         {/* Recent Quotes */}
-        {quotes.length > 0 && (
-          <div className="border-t p-6">
-            <h3 className="text-lg font-semibold mb-4">Recent Quote Requests</h3>
-            <div className="space-y-4">
-              {quotes.slice(0, 3).map((quote) => (
-                <div key={quote.id} className="border rounded-lg p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <h4 className="font-medium">{quote.name}</h4>
-                    <span className="text-sm text-gray-500">
-                      {new Date(quote.createdAt).toLocaleDateString()}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-600 mb-1">Email: {quote.email}</p>
-                  <p className="text-sm text-gray-700">{quote.message}</p>
-                </div>
-              ))}
-            </div>
+        <div className="border-t p-6">
+          <h3 className="text-lg font-semibold mb-4">Recent Quote Requests</h3>
+          <div className="space-y-4">
+            <p>No quotes</p>
           </div>
-        )}
+        </div>
       </div>
     </div>
   )

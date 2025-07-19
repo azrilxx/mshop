@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import PlanUsageBanner from '@/components/PlanUsageBanner'
 
 interface Product {
   id: string
@@ -109,10 +110,12 @@ export default function CreateAdPage() {
       <div className="max-w-2xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           <div className="mb-6">
-            <Link href="/seller" className="text-blue-600 hover:text-blue-800">
-              ← Back to Seller Center
+            <Link href="/seller/ads" className="text-blue-600 hover:text-blue-800">
+              ← Back to Ads
             </Link>
           </div>
+
+          <PlanUsageBanner feature="ads" />
 
           <h1 className="text-3xl font-bold text-gray-900 mb-6">Create Advertisement</h1>
 

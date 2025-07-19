@@ -1,4 +1,3 @@
-
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { reportDb } from '@/lib/db'
@@ -11,7 +10,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { productId, category, description, contact } = await request.json()
-    
+
     if (!productId || !category || !description) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
@@ -35,7 +34,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await getSession()
     if (!session || session.role !== 'admin') {

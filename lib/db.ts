@@ -202,6 +202,16 @@ export interface Report {
   adminNotes?: string
 }
 
+export interface PlanUsage {
+  userId: string
+  month: string
+  productsCreated: number
+  adsCreated: number
+  reportsGenerated: number
+  createdAt: string
+  updatedAt: string
+}
+
 export const reportDb = {
   async create(report: Omit<Report, 'id' | 'createdAt'>): Promise<Report> {
     const newReport: Report = {
@@ -713,10 +723,75 @@ export const planDb = {
 
   async decrementQuota(userId: string): Promise<void> {
     const plan = await this.get(userId)
-    if (plan.quotaUsed > 0) {
-      plan.quotaUsed -= 1
-      await this.update(userId, { quotaUsed: plan.quotaUsed })
+    plan.quotaUsed = Math.max(0, plan.quotaUsed - 1)
+    await this.update(userId, { quotaUsed: plan.quotaUsed })
+  }
+}
+
+// Plan Usage Tracking
+export const planUsageDb = {
+  async get(userId: string): Promise<PlanUsage> {
+    const currentMonth = new Date().toISOString().slice(0, 7) // YYYY-MM format
+    const key = `usage:${userId}:${currentMonth}`
+
+    let usage = await db.get(key) as PlanUsage | null
+
+    if (!usage) {
+      usage = {
+        userId,
+        month: currentMonth,
+        productsCreated: 0,
+        adsCreated: 0,
+        reportsGenerated: 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+      await db.set(key, usage)
     }
+
+    return usage
+  },
+
+  async incrementProducts(userId: string): Promise<void> {
+    const usage = await this.get(userId)
+    usage.productsCreated += 1
+    usage.updatedAt = new Date().toISOString()
+
+    const currentMonth = new Date().toISOString().slice(0, 7)
+    await db.set(`usage:${userId}:${currentMonth}`, usage)
+  },
+
+  async incrementAds(userId: string): Promise<void> {
+    const usage = await this.get(userId)
+    usage.adsCreated += 1
+    usage.updatedAt = new Date().toISOString()
+
+    const currentMonth = new Date().toISOString().slice(0, 7)
+    await db.set(`usage:${userId}:${currentMonth}`, usage)
+  },
+
+  async incrementReports(userId: string): Promise<void> {
+    const usage = await this.get(userId)
+    usage.reportsGenerated += 1
+    usage.updatedAt = new Date().toISOString()
+
+    const currentMonth = new Date().toISOString().slice(0, 7)
+    await db.set(`usage:${userId}:${currentMonth}`, usage)
+  },
+
+  async resetForNewPlan(userId: string): Promise<void> {
+    const currentMonth = new Date().toISOString().slice(0, 7)
+    const usage: PlanUsage = {
+      userId,
+      month: currentMonth,
+      productsCreated: 0,
+      adsCreated: 0,
+      reportsGenerated: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+
+    await db.set(`usage:${userId}:${currentMonth}`, usage)
   }
 }
 
@@ -965,7 +1040,7 @@ export const quoteDb = {
     const keys = await db.list('quote:')
     const quotes: Quote[] = []
 
-    for (const key of keys) {
+    for (const keys) {
       const quote = await db.get(key) as Quote
       if (quote) {
         const product = await productDb.findById(quote.productId)

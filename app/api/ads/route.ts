@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { adDb, planDb, productDb } from '@/lib/db'
+import { adDb, planDb, productDb, planUsageDb } from '@/lib/db'
 import { requireAuth, requireRole } from '@/lib/auth'
+import { getPlanLimits } from '@/lib/plan'
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const sellerId = searchParams.get('sellerId')
     const activeOnly = searchParams.get('activeOnly') === 'true'
-    
+
     if (sellerId) {
       const ads = await adDb.findBySeller(sellerId)
       return NextResponse.json(ads)
@@ -56,23 +57,25 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check plan limits for sellers
-    if (user.role === 'seller') {
-      const plan = await planDb.get(user.id)
-      
-      if (plan.maxAdSlots === 0) {
-        return NextResponse.json(
-          { error: `Ad slots not available. Your ${plan.tier} plan does not include ad slots. Upgrade to Standard or Premium plan.` },
-          { status: 403 }
-        )
-      }
+    // Check user's plan and monthly usage for ads
+    const [plan, usage] = await Promise.all([
+      planDb.get(user.id),
+      planUsageDb.get(user.id)
+    ])
 
-      if (plan.adSlotsUsed >= plan.maxAdSlots) {
-        return NextResponse.json(
-          { error: `Ad slot limit reached. Your ${plan.tier} plan allows ${plan.maxAdSlots} ad slots. Upgrade your plan for more slots.` },
-          { status: 403 }
-        )
-      }
+    const limits = getPlanLimits(plan.tier)
+    if (limits.maxAds === 0) {
+      return NextResponse.json(
+        { error: `Your ${plan.tier} plan doesn't include ads. Please upgrade.` },
+        { status: 403 }
+      )
+    }
+
+    if (limits.maxAds !== -1 && usage.adsCreated >= limits.maxAds) {
+      return NextResponse.json(
+        { error: `Ad limit reached for your ${plan.tier} plan (${limits.maxAds}/month)` },
+        { status: 403 }
+      )
     }
 
     const activeFrom = new Date()
@@ -92,7 +95,10 @@ export async function POST(request: NextRequest) {
     // Increment ad slot usage for sellers
     if (user.role === 'seller') {
       const plan = await planDb.get(user.id)
-      await planDb.update(user.id, { adSlotsUsed: plan.adSlotsUsed + 1 })
+      await Promise.all([
+        planDb.update(user.id, { adSlotsUsed: plan.adSlotsUsed + 1 }),
+        planUsageDb.incrementAds(user.id)
+      ])
     }
 
     return NextResponse.json(ad, { status: 201 })

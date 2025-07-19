@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { productDb, planDb } from '@/lib/db'
+import { productDb, planDb, planUsageDb } from '@/lib/db'
 import { requireAuth, requireRole } from '@/lib/auth'
+import { getPlanLimits } from '@/lib/plan'
 
 export async function GET(request: NextRequest) {
   try {
@@ -53,14 +54,19 @@ export async function POST(request: NextRequest) {
 
     const { name, price, description, category, images, listingType, location } = await request.json()
 
-    // Check seller's plan limits
-    const plan = await planDb.get(user.id)
-    const sellerProducts = await productDb.findByMerchant(user.id)
+    // Check user's seller plan and monthly usage
+    const [plan, usage] = await Promise.all([
+      planDb.get(user.id),
+      planUsageDb.get(user.id)
+    ])
 
-    if (plan.maxProducts !== -1 && sellerProducts.length >= plan.maxProducts) {
-      return NextResponse.json({ 
-        error: `Product limit reached. Your ${plan.tier} plan allows ${plan.maxProducts} products.` 
-      }, { status: 403 })
+    // Check if user can create more products based on plan limits
+    const limits = getPlanLimits(plan.tier)
+    if (limits.maxProducts !== -1 && usage.productsCreated >= limits.maxProducts) {
+      return NextResponse.json(
+        { error: `Product limit reached for your ${plan.tier} plan (${limits.maxProducts}/month)` },
+        { status: 403 }
+      )
     }
 
     const product = await productDb.create({
@@ -75,8 +81,11 @@ export async function POST(request: NextRequest) {
       location: location || { city: '', country: '' }
     })
 
-    // Increment seller's quota
-    await planDb.incrementQuota(user.id)
+    // Update usage tracking
+    await Promise.all([
+      planDb.incrementQuota(user.id),
+      planUsageDb.incrementProducts(user.id)
+    ])
 
     return NextResponse.json(product)
   } catch (error) {

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { planDb } from '@/lib/db'
+import { planDb, planUsageDb } from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
 
 export async function GET(request: NextRequest) {
@@ -29,6 +29,11 @@ export async function POST(request: NextRequest) {
     }
 
     const plan = await planDb.update(user.id, { tier })
+    
+    // Reset monthly usage when upgrading plan
+    if (tier === 'Standard' || tier === 'Premium') {
+      await planUsageDb.resetForNewPlan(user.id)
+    }
     
     return NextResponse.json(plan)
   } catch (error: any) {

@@ -7,7 +7,7 @@ import Link from 'next/link'
 
 export default async function SellerReportsPage() {
   const session = await getSession()
-  
+
   if (!session || session.user.role !== 'seller') {
     redirect('/dashboard')
   }
@@ -57,7 +57,7 @@ export default async function SellerReportsPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar user={user} />
-      
+
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           <div className="mb-6">

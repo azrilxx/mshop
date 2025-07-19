@@ -1,8 +1,9 @@
-'use client'
 
 import { useState, useEffect } from 'react'
+import { planDb, planUsageDb } from './db'
+import { getPlanLimits, canCreateProduct, canCreateAd, canGenerateReport, getRemainingProducts, getRemainingAds, getRemainingReports } from './plan'
 
-export interface Plan {
+interface SubscriptionPlan {
   userId: string
   tier: 'Free' | 'Standard' | 'Premium'
   maxProducts: number
@@ -14,40 +15,57 @@ export interface Plan {
   updatedAt: string
 }
 
-export interface FeatureAccess {
+interface PlanUsage {
+  userId: string
+  month: string
+  productsCreated: number
+  adsCreated: number
+  reportsGenerated: number
+  createdAt: string
+  updatedAt: string
+}
+
+interface FeatureAccess {
   canCreateProducts: boolean
   canCreateAds: boolean
-  canAccessMassShipment: boolean
   canAccessReports: boolean
+  canAccessMassShipment: boolean
   canAccessPrioritySupport: boolean
   hasAdSlotsAvailable: boolean
   hasProductSlotsAvailable: boolean
   remainingProducts: number
   remainingAdSlots: number
+  remainingReports: number
+  upgradeMessage: string
 }
 
-export function useFeatureAccess(): {
-  featureAccess: FeatureAccess | null
-  plan: Plan | null
-  loading: boolean
-  error: string | null
-} {
-  const [plan, setPlan] = useState<Plan | null>(null)
+export function useUserPlan() {
+  const [plan, setPlan] = useState<SubscriptionPlan | null>(null)
+  const [usage, setUsage] = useState<PlanUsage | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetchPlan()
+    fetchPlanData()
   }, [])
 
-  const fetchPlan = async () => {
+  const fetchPlanData = async () => {
     try {
-      const response = await fetch('/api/plan')
-      if (!response.ok) {
-        throw new Error('Failed to fetch plan')
+      setLoading(true)
+      const [planResponse, usageResponse] = await Promise.all([
+        fetch('/api/plan'),
+        fetch('/api/plan/usage')
+      ])
+
+      if (!planResponse.ok || !usageResponse.ok) {
+        throw new Error('Failed to fetch plan data')
       }
-      const data = await response.json()
-      setPlan(data)
+
+      const planData = await planResponse.json()
+      const usageData = await usageResponse.json()
+
+      setPlan(planData)
+      setUsage(usageData)
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -55,83 +73,56 @@ export function useFeatureAccess(): {
     }
   }
 
-  const featureAccess: FeatureAccess | null = plan ? {
-    canCreateProducts: plan.quotaUsed < plan.maxProducts,
-    canCreateAds: plan.adSlotsUsed < plan.maxAdSlots && plan.tier !== 'Free',
+  const featureAccess: FeatureAccess | null = plan && usage ? {
+    canCreateProducts: canCreateProduct(plan.tier, usage.productsCreated),
+    canCreateAds: canCreateAd(plan.tier, usage.adsCreated),
+    canAccessReports: canGenerateReport(plan.tier, usage.reportsGenerated),
     canAccessMassShipment: plan.tier === 'Standard' || plan.tier === 'Premium',
-    canAccessReports: plan.tier === 'Standard' || plan.tier === 'Premium',
     canAccessPrioritySupport: plan.tier === 'Premium',
-    hasAdSlotsAvailable: plan.adSlotsUsed < plan.maxAdSlots,
-    hasProductSlotsAvailable: plan.quotaUsed < plan.maxProducts,
-    remainingProducts: plan.maxProducts - plan.quotaUsed,
-    remainingAdSlots: plan.maxAdSlots - plan.adSlotsUsed
+    hasAdSlotsAvailable: canCreateAd(plan.tier, usage.adsCreated),
+    hasProductSlotsAvailable: canCreateProduct(plan.tier, usage.productsCreated),
+    remainingProducts: getRemainingProducts(plan.tier, usage.productsCreated),
+    remainingAdSlots: getRemainingAds(plan.tier, usage.adsCreated),
+    remainingReports: getRemainingReports(plan.tier, usage.reportsGenerated),
+    upgradeMessage: plan.tier === 'Free' ? 'Upgrade to Standard for 30 products and 12 ads per month' :
+                   plan.tier === 'Standard' ? 'Upgrade to Premium for unlimited products and ads' :
+                   'You have unlimited access to all features'
   } : null
 
   return {
-    featureAccess,
     plan,
+    usage,
+    featureAccess,
     loading,
-    error
+    error,
+    refetch: fetchPlanData
   }
 }
 
 export function getPlanAccess(tier: 'Free' | 'Standard' | 'Premium') {
-  const planLimits = {
-    Free: { 
-      maxProducts: 20, 
-      maxAds: 0, 
-      maxReports: 0,
-      hasShipment: false,
-      hasAnalytics: false,
-      hasPrioritySupport: false
-    },
-    Standard: { 
-      maxProducts: 60, 
-      maxAds: 12, 
-      maxReports: 30,
-      hasShipment: true,
-      hasAnalytics: true,
-      hasPrioritySupport: false
-    },
-    Premium: { 
-      maxProducts: -1, // unlimited
-      maxAds: -1, // unlimited
-      maxReports: -1, // unlimited
-      hasShipment: true,
-      hasAnalytics: true,
-      hasPrioritySupport: true
-    }
-  }
-
-  const limits = planLimits[tier]
-
+  const limits = getPlanLimits(tier)
+  
   return {
     // Product limits
-    canCreateProducts: (currentCount: number) => 
-      limits.maxProducts === -1 || currentCount < limits.maxProducts,
+    canCreateProducts: (currentCount: number) => canCreateProduct(tier, currentCount),
     getProductLimit: () => limits.maxProducts,
-    getRemainingProducts: (currentCount: number) => 
-      limits.maxProducts === -1 ? Infinity : Math.max(0, limits.maxProducts - currentCount),
+    getRemainingProducts: (currentCount: number) => getRemainingProducts(tier, currentCount),
 
     // Ad limits  
-    canCreateAds: (currentCount: number) => 
-      limits.maxAds === -1 || currentCount < limits.maxAds,
+    canCreateAds: (currentCount: number) => canCreateAd(tier, currentCount),
     getAdLimit: () => limits.maxAds,
-    getRemainingAds: (currentCount: number) => 
-      limits.maxAds === -1 ? Infinity : Math.max(0, limits.maxAds - currentCount),
+    getRemainingAds: (currentCount: number) => getRemainingAds(tier, currentCount),
 
     // Report limits
-    canAccessReports: (currentCount: number) => 
-      limits.maxReports === -1 || currentCount < limits.maxReports,
+    canAccessReports: (currentCount: number) => canGenerateReport(tier, currentCount),
     getReportLimit: () => limits.maxReports,
-    getRemainingReports: (currentCount: number) => 
-      limits.maxReports === -1 ? Infinity : Math.max(0, limits.maxReports - currentCount),
+    getRemainingReports: (currentCount: number) => getRemainingReports(tier, currentCount),
 
     // Feature access
     hasFeature: (feature: string) => {
       const featureMap = {
-        'shipment': limits.hasShipment,
-        'analytics': limits.hasAnalytics,
+        'shipment': tier === 'Standard' || tier === 'Premium',
+        'analytics': limits.hasAdvancedAnalytics,
         'priority_support': limits.hasPrioritySupport,
         'ads': limits.maxAds > 0,
         'reports': limits.maxReports > 0
@@ -157,7 +148,6 @@ export function hasFeature(userPlan: 'Free' | 'Standard' | 'Premium', featureNam
   return planAccess.hasFeature(featureName)
 }
 
-// Client-side hook wrapper
 export function usePlanAccess(tier: 'Free' | 'Standard' | 'Premium') {
   return getPlanAccess(tier)
 }
