@@ -1,0 +1,79 @@
+/fix
+
+# CONTEXT
+You are working inside the `mshop` SaaS marketplace project on Replit. You must now replicate critical Alibaba UI patterns: login modal, registration page, and homepage search functionality. Use Alibaba.com as the reference.
+
+You must activate Replit’s **agentic reasoning and MCP (Model Context Protocol)** to visually and structurally confirm what the target UI looks like before coding.
+
+---
+
+# MCP VERIFICATION (REQUIRED)
+- Activate Replit’s agentic / MCP visual memory
+- Locate the target layout patterns from Alibaba.com for:
+  - Login modal UX
+  - Supplier registration form
+  - Landing search bar
+- Confirm element spacing, form hierarchy, and button interaction
+- Align placement, flow, and text fidelity with Alibaba standard
+
+---
+
+# FEATURES TO BUILD
+
+## 1. UNIFIED LOGIN MODAL (Alibaba-style)
+- Trigger from top nav "Sign In"
+- Modal should include:
+  - Email + password
+  - Social login (Google, Facebook, LinkedIn) — stub buttons
+  - Terms agreement line (with hyperlink)
+  - Section list below:
+    - My Muvex, Orders, Messages, RFQs, Favorites, Account, Membership
+
+File: `components/LoginModal.tsx`
+
+## 2. SIGNUP FORM (Supplier-style)
+- Route: `/register/page.tsx`
+- Fields (match Alibaba layout):
+  - Country (auto-detected or default to Malaysia)
+  - Trade Role: Buyer / Seller / Both (radio group)
+  - Email, Password, Confirm Password
+  - Company Name
+  - Full Name (first + last)
+  - Phone: prefixed country code + number
+- Add checkbox to agree to terms
+- Save to `user:{id}` in Replit DB:
+```ts
+role, companyName, phone, fullName, country, registeredAt
+```
+
+## 3. LANDING SEARCH HEADER
+- Modify `/landing/page.tsx` hero section
+- Add wide search bar component
+  - White background, left-aligned text input
+  - Orange submit button labeled “Search”
+  - Optional icon on right (camera button, disabled)
+  - Route to `/shop?query=...`
+- Optional: show search tags under the bar
+
+---
+
+# DATABASE
+Use Replit DB only. Store form output under `user:{id}`.  
+Do not mutate existing cart/session behavior.
+
+---
+
+# VALIDATION
+- Login modal layout matches Alibaba (visually and structurally)
+- Signup form includes all required fields
+- Search bar behaves as expected with proper layout
+- MCP layout validation passes before rendering
+
+---
+
+# RETURN
+- Files created/modified
+- List of Replit DB keys added
+- Screenshot of rendered components if possible
+- Summary of visual confirmation results (login, register, search layout)
+
