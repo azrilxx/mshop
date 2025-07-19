@@ -1,0 +1,85 @@
+/fix
+
+# CONTEXT
+You are working on the `mshop` Replit project. All core flows (auth, product, quote, billing, dashboard, landing) are live. This phase activates full admin governance, moderation, and control logic.
+
+---
+
+# OBJECTIVE
+Build tools for platform governance. Admins must be able to verify sellers, review products, handle abuse reports, and control categories.
+
+---
+
+# FEATURES TO IMPLEMENT
+
+## 1. SELLER VERIFICATION WORKFLOW
+- Add boolean field to seller profile: `is_verified: boolean`
+- In `/admin/merchants/page.tsx`, show:
+  - All unverified sellers
+  - Buttons: [Verify] / [Reject]
+  - On Verify: set `is_verified = true`
+  - On Reject: optional reason, then remove listing
+- Mark verified sellers with a green badge across the site
+
+---
+
+## 2. REPORT ABUSE SYSTEM
+- Allow buyers to report products:
+  - Button: “Report Listing” on product page
+  - Form: category, description, optional contact
+  - Save to Replit DB: `report:{productId}:{id}`
+- Admin route: `/admin/reports/page.tsx`
+  - View product reports
+  - Button: [Mark Reviewed] or [Suspend Listing]
+
+---
+
+## 3. CATEGORY MANAGEMENT
+- Admin route: `/admin/categories/page.tsx`
+- Load all current categories from `category:*`
+- Ability to:
+  - Add new categories
+  - Edit existing names and image URLs
+  - Archive categories (add `archived = true`)
+- Archived categories must not show up in product creation or search
+
+---
+
+## 4. USER ACCOUNT CONTROL
+- Route: `/admin/users/page.tsx`
+- For each user:
+  - View role, email, login date
+  - Button: [Suspend Account]
+- Add field to user: `status: "active" | "suspended"`
+- On suspended, block login and hide user listings
+
+---
+
+## 5. AUDIT METRICS
+- Reuse `/admin/metrics`
+- Add:
+  - Verified vs unverified sellers count
+  - Products under review
+  - Reports pending
+  - Active vs suspended users
+
+---
+
+# DATABASE
+Use Replit DB only.  
+Use existing keys like `user:{id}`, `product:{id}`, `report:{productId}:{reportId}`.
+
+---
+
+# VALIDATION
+- Only admin users can access admin pages
+- Ensure field changes (verification, suspension) are reflected platform-wide
+- Validate that abuse reports persist
+- Ensure archived categories are hidden from buyer/seller views
+
+---
+
+# RETURN
+- List of all new routes or components
+- DB shape changes (e.g., status fields)
+- Confirmation that admin panel reflects real-time platform state
