@@ -1,0 +1,58 @@
+/fix
+
+1. **Add Alibaba-style Header Component**
+   - Create `components/Header.tsx` and inject into `layout.tsx` or `_app.tsx`
+   - Include:
+     - 🌐 Country selector: Flag + "MY"
+     - 🌍 Language selector: English-MYR (placeholder)
+     - 🛒 Cart icon
+     - 👤 Sign In (with hover dropdown)
+     - 🟠 Create account button
+     - Links: AI sourcing agent, Buyer Central, Help Center, App & Extension, Become a supplier
+   - Use Tailwind `flex`, `gap`, `hover`, `relative` and `absolute` for layout
+
+2. **Implement Sign-In Hover Dropdown**
+   - On hover of "Sign in" button:
+     - Show dropdown card styled like screenshot (rounded, white, shadow-lg)
+     - Include:
+       - 🔒 “Sign In” CTA
+       - Social login buttons (Facebook, Google, LinkedIn)
+       - Links: My Account, Orders, Messages, RFQs, Favorites, Membership Program
+     - Ensure it's positioned correctly with Tailwind `absolute top-full right-0 z-50`
+
+3. **Activate Dropdown Interactivity**
+   - If a `Dropdown.tsx` or `Popover.tsx` component already exists in project, reuse it
+   - Else: use Tailwind + `useState` + `onMouseEnter/onMouseLeave` or `onClickOutside`
+
+4. **Phase 5: Notifications & Communication Layer**
+   - 📧 **Email Trigger (Order Confirmation)**:
+     - On successful checkout: trigger Supabase function to send confirmation email
+     - Use Supabase’s `smtp.send_email()` or external Mailchimp API
+   - 🔐 **OTP for Login**:
+     - On login form, add “Send OTP” toggle
+     - Generate 6-digit code, store in `otp_codes` table with TTL
+     - Validate on submit
+   - 🛒 **Abandoned Cart Reminder**:
+     - Create `cart_tracking` table with:
+       ```ts
+       {
+         user_id: uuid,
+         items: jsonb,
+         last_updated: timestamp
+       }
+       ```
+     - Set up CRON (via Supabase Edge Functions) to check for carts untouched for >1hr
+     - Send reminder email using Mailchimp or direct SMTP
+   - Claude: Add helper `lib/notifications.ts` and use in cart + checkout flows
+
+5. **Push to GitHub**
+   - Ensure project is connected to GitHub
+   - Run:
+     ```sh
+     git add .
+     git commit -m "Phase 5: Communication + Alibaba-style header with dropdown"
+     git push
+     ```
+
+Claude: Use TailwindCSS, shadcn/ui components, React state and Supabase native triggers. Match styling and hover behavior as shown in attached images. Prioritize mobile-responsiveness and clean layout.
+
