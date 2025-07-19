@@ -2,7 +2,13 @@
 import Database from '@replit/database'
 import { landingDb, LandingCategory, LandingProduct } from '@/lib/landingDb'
 
-const db = new Database()
+// Ensure fetch is available for Replit DB in Node.js environment
+if (typeof globalThis.fetch === 'undefined') {
+  // @ts-ignore
+  globalThis.fetch = require('node-fetch')
+}
+
+const db = new Database(process.env.REPLIT_DB_URL)
 
 // Fallback data in case scraping fails
 const fallbackCategories: LandingCategory[] = [

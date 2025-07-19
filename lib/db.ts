@@ -2,7 +2,13 @@ import Database from '@replit/database'
 import bcrypt from 'bcryptjs'
 import { v4 as uuidv4 } from 'uuid'
 
-const db = new Database()
+// Ensure fetch is available for Replit DB in Node.js environment
+if (typeof globalThis.fetch === 'undefined') {
+  // @ts-ignore
+  globalThis.fetch = require('node-fetch')
+}
+
+const db = new Database(process.env.REPLIT_DB_URL)
 
 export interface User {
   id: string

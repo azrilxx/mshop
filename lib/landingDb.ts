@@ -1,7 +1,13 @@
 
 import Database from '@replit/database'
 
-const db = new Database()
+// Ensure fetch is available for Replit DB in Node.js environment
+if (typeof globalThis.fetch === 'undefined') {
+  // @ts-ignore
+  globalThis.fetch = require('node-fetch')
+}
+
+const db = new Database(process.env.REPLIT_DB_URL)
 
 export interface LandingCategory {
   id: string
