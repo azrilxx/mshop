@@ -48,26 +48,61 @@ export default async function LandingPage() {
         </div>
       </nav>
 
-      {/* Hero Banner */}
+      {/* Hero Banner - Alibaba Style */}
       <section 
-        className="relative h-96 bg-cover bg-center"
-        style={{ backgroundImage: `url(${heroSection?.backgroundImage})` }}
+        className="relative h-80 bg-cover bg-center"
+        style={{ 
+          backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url(${heroSection?.backgroundImage || 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80'})` 
+        }}
       >
-        <div className="absolute inset-0 bg-black bg-opacity-50"></div>
         <div className="relative max-w-7xl mx-auto px-4 h-full flex flex-col justify-center">
-          <div className="text-center text-white mb-8">
-            <h1 className="text-4xl md:text-6xl font-bold mb-4 leading-tight">
-              {heroSection?.title || 'Discover Oil & Gas Equipment. Redefined.'}
+          <div className="mb-8">
+            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 leading-tight max-w-4xl">
+              The leading B2B ecommerce platform for global trade
             </h1>
-            <p className="text-xl mb-8 text-gray-200">
-              {heroSection?.subtitle || 'Connect with verified suppliers worldwide'}
-            </p>
           </div>
-          <SearchBar />
-          <div className="mt-8 text-center">
-            <Link href="/products" className="bg-white text-orange-500 px-8 py-3 rounded-lg text-lg font-semibold hover:bg-gray-100 transition-colors inline-block shadow-lg">
-              Browse All Products
-            </Link>
+          
+          {/* Alibaba-style Search Bar */}
+          <div className="w-full max-w-4xl">
+            <form className="relative">
+              <div className="flex rounded-full shadow-lg overflow-hidden bg-white">
+                <input
+                  type="text"
+                  placeholder="What are you looking for..."
+                  className="flex-1 px-6 py-4 text-lg focus:outline-none"
+                />
+                <button
+                  type="button"
+                  className="px-4 py-4 text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </button>
+                <button
+                  type="submit"
+                  className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-4 font-medium text-lg transition-colors"
+                >
+                  Search
+                </button>
+              </div>
+            </form>
+
+            {/* Frequently Searched Pills */}
+            <div className="mt-4 flex items-center space-x-3">
+              <span className="text-white text-sm">Frequently searched:</span>
+              <div className="flex space-x-2">
+                {['pipe fittings', 'valves', 'heat exchangers', 'pressure vessels'].map((term) => (
+                  <button
+                    key={term}
+                    className="bg-black bg-opacity-40 text-white px-4 py-2 rounded-full text-sm border border-gray-500 hover:border-gray-300 transition-colors"
+                  >
+                    {term}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </section>
