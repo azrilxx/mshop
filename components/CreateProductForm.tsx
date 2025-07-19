@@ -24,17 +24,32 @@ export default function CreateProductForm() {
     tags: [] as string[]
   })
 
-  const handleCertificationUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCertificationUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (files) {
-      // In a real implementation, you'd upload to a file storage service
-      // For now, we'll simulate with placeholder URLs
-      const newCertifications = Array.from(files).map(file => 
-        `https://placeholder-certs.com/${file.name}`
-      )
+      const uploadPromises = Array.from(files).map(async (file) => {
+        const formData = new FormData()
+        formData.append('file', file)
+        formData.append('type', 'certification')
+        
+        const response = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData
+        })
+        
+        if (response.ok) {
+          const { url } = await response.json()
+          return url
+        }
+        return null
+      })
+      
+      const uploadedUrls = await Promise.all(uploadPromises)
+      const validUrls = uploadedUrls.filter(url => url !== null)
+      
       setFormData({
         ...formData,
-        certifications: [...formData.certifications, ...newCertifications]
+        certifications: [...formData.certifications, ...validUrls]
       })
     }
   }

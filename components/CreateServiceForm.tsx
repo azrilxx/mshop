@@ -6,24 +6,28 @@ import { useRouter } from 'next/navigation'
 import TagInput from '@/components/TagInput'
 
 const SERVICE_TYPES = [
-  'Inspection & Testing',
-  'Maintenance & Repair',
-  'Installation Services',
-  'Consulting & Engineering',
-  'Training & Certification',
+  'Drilling Services',
+  'Well Completion',
+  'Production Optimization',
+  'Pipeline Maintenance',
+  'Environmental Consulting',
+  'Safety Training',
   'Equipment Rental',
-  'Project Management',
-  'Safety Services'
+  'Inspection Services',
+  'Engineering Design',
+  'Project Management'
 ]
 
 export default function CreateServiceForm() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
+    title: '',
     serviceType: '',
     description: '',
     region: '',
     contact: '',
+    contactEmail: '',
     tags: [] as string[]
   })
 
@@ -43,11 +47,11 @@ export default function CreateServiceForm() {
       if (response.ok) {
         router.push('/services')
       } else {
-        alert('Failed to create service')
+        alert('Failed to create service listing')
       }
     } catch (error) {
       console.error('Error creating service:', error)
-      alert('Failed to create service')
+      alert('Failed to create service listing')
     } finally {
       setLoading(false)
     }
@@ -55,6 +59,20 @@ export default function CreateServiceForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 bg-white p-6 rounded-lg shadow">
+      <div>
+        <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
+          Service Title
+        </label>
+        <input
+          type="text"
+          id="title"
+          value={formData.title}
+          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          required
+        />
+      </div>
+
       <div>
         <label htmlFor="serviceType" className="block text-sm font-medium text-gray-700 mb-2">
           Service Type
@@ -77,7 +95,7 @@ export default function CreateServiceForm() {
 
       <div>
         <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
-          Service Description
+          Description
         </label>
         <textarea
           id="description"
@@ -85,7 +103,6 @@ export default function CreateServiceForm() {
           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
           rows={4}
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Describe your service offerings, expertise, and capabilities..."
           required
         />
       </div>
@@ -99,35 +116,49 @@ export default function CreateServiceForm() {
           id="region"
           value={formData.region}
           onChange={(e) => setFormData({ ...formData, region: e.target.value })}
+          placeholder="e.g., North Sea, Gulf of Mexico, Texas"
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="e.g., Gulf of Mexico, North Sea, Middle East"
           required
         />
       </div>
 
-      <div>
-        <label htmlFor="contact" className="block text-sm font-medium text-gray-700 mb-2">
-          Contact Information
-        </label>
-        <input
-          type="text"
-          id="contact"
-          value={formData.contact}
-          onChange={(e) => setFormData({ ...formData, contact: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Phone, email, or website"
-          required
-        />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label htmlFor="contact" className="block text-sm font-medium text-gray-700 mb-2">
+            Contact Person
+          </label>
+          <input
+            type="text"
+            id="contact"
+            value={formData.contact}
+            onChange={(e) => setFormData({ ...formData, contact: e.target.value })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
+          />
+        </div>
+        <div>
+          <label htmlFor="contactEmail" className="block text-sm font-medium text-gray-700 mb-2">
+            Contact Email
+          </label>
+          <input
+            type="email"
+            id="contactEmail"
+            value={formData.contactEmail}
+            onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
+          />
+        </div>
       </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Tags
+          Service Tags
         </label>
         <TagInput
           tags={formData.tags}
           onChange={(tags) => setFormData({ ...formData, tags })}
-          placeholder="Add tags to help buyers find your service..."
+          placeholder="Add tags to help clients find your service..."
         />
       </div>
 
@@ -136,8 +167,7 @@ export default function CreateServiceForm() {
         disabled={loading}
         className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50"
       >
-        {loading ? 'Creating...' : 'Create Service'}
+        {loading ? 'Creating...' : 'Create Service Listing'}
       </button>
     </form>
   )
-}

@@ -40,7 +40,7 @@ export default async function ServicesPage() {
                 </div>
                 
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  {service.serviceType}
+                  {service.title || service.serviceType}
                 </h3>
                 
                 <p className="text-gray-600 mb-4 line-clamp-3">
@@ -51,7 +51,11 @@ export default async function ServicesPage() {
                   📍 {service.region}
                 </div>
                 
-                {service.tags.length > 0 && (
+                <div className="text-sm text-gray-500 mb-4">
+                  👤 {service.contact}
+                </div>
+                
+                {service.tags && service.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1">
                     {service.tags.slice(0, 3).map((tag) => (
                       <span

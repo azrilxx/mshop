@@ -12,11 +12,11 @@ export default async function ProductsPage() {
   return (
     <div>
       <Navbar user={session?.user || null} />
-      
+
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           <h1 className="text-3xl font-bold text-gray-900 mb-6">Products</h1>
-          
+
           {activeAds.length > 0 && (
             <div className="mb-8">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Featured Advertisements</h2>
@@ -27,7 +27,7 @@ export default async function ProductsPage() {
               </div>
             </div>
           )}
-          
+
           {products.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-gray-500">No products available yet.</p>

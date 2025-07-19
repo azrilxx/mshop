@@ -131,6 +131,9 @@ export interface Insight {
   author: string
   publishedAt: string
   featured: boolean
+  excerpt: string
+  tags: string[]
+  readTime: number
 }
 
 export const userDb = {
@@ -736,10 +739,12 @@ export const quoteDb = {
 
 export interface Service {
   id: string
+  title: string
   serviceType: string
   description: string
   region: string
   contact: string
+  contactEmail: string
   tags: string[]
   providerId: string
   status: 'active' | 'inactive'
@@ -750,7 +755,9 @@ export const insightDb = {
   async create(insight: Omit<Insight, 'id'>): Promise<Insight> {
     const newInsight: Insight = {
       ...insight,
-      id: uuidv4()
+      id: uuidv4(),
+      excerpt: insight.excerpt || insight.content.substring(0, 200) + '...',
+      readTime: insight.readTime || Math.ceil(insight.content.length / 1000)
     }
 
     await db.set(`insight:${newInsight.id}`, newInsight)
@@ -777,6 +784,20 @@ export const insightDb = {
   async getFeatured(): Promise<Insight | null> {
     const insights = await this.getAll()
     return insights.find(insight => insight.featured) || null
+  },
+
+  async getByTag(tag: string): Promise<Insight[]> {
+    const insights = await this.getAll()
+    return insights.filter(insight => insight.tags.includes(tag))
+  },
+
+  async update(id: string, updates: Partial<Insight>): Promise<Insight | null> {
+    const insight = await this.findById(id)
+    if (!insight) return null
+
+    const updatedInsight = { ...insight, ...updates }
+    await db.set(`insight:${id}`, updatedInsight)
+    return updatedInsight
   }
 }
 
@@ -785,6 +806,7 @@ export const serviceDb = {
     const newService: Service = {
       ...service,
       id: uuidv4(),
+      title: service.title || service.serviceType,
       createdAt: new Date().toISOString()
     }
 
@@ -823,6 +845,47 @@ export const serviceDb = {
     }
     
     return services.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  }
+}
+
+// Sample insights for initial data
+export async function initializeSampleData() {
+  // Check if insights already exist
+  const existingInsights = await insightDb.getAll()
+  
+  if (existingInsights.length === 0) {
+    const sampleInsights = [
+      {
+        title: "The Future of Renewable Energy in Oil & Gas",
+        content: "The oil and gas industry is undergoing a significant transformation as companies increasingly adopt renewable energy technologies. This shift is driven by environmental regulations, investor pressure, and the economic viability of clean energy solutions. Companies are investing heavily in solar, wind, and hydrogen technologies to reduce their carbon footprint and prepare for a sustainable future. The integration of these technologies with traditional operations presents both challenges and opportunities for industry leaders.",
+        imageUrl: "/attached_assets/images/renewable-energy.jpg",
+        author: "Dr. Sarah Mitchell",
+        publishedAt: "2024-01-15T10:00:00Z",
+        featured: true,
+        excerpt: "Exploring how oil and gas companies are embracing renewable energy technologies to create a more sustainable future.",
+        tags: ["renewable", "sustainability", "technology", "future"],
+        readTime: 5
+      },
+      {
+        title: "Digital Transformation in Upstream Operations",
+        content: "Digital technologies are revolutionizing upstream oil and gas operations. From IoT sensors on drilling rigs to AI-powered predictive maintenance, companies are leveraging technology to improve efficiency, reduce costs, and enhance safety. Machine learning algorithms can now predict equipment failures before they occur, while digital twins provide virtual representations of physical assets for better decision-making.",
+        imageUrl: "/attached_assets/images/digital-transformation.jpg",
+        author: "Mark Thompson",
+        publishedAt: "2024-01-10T14:30:00Z",
+        featured: false,
+        excerpt: "How digital technologies are transforming upstream operations and improving efficiency across the industry.",
+        tags: ["digital", "upstream", "technology", "AI"],
+        readTime: 4
+      }
+    ]
+    
+    for (const insight of sampleInsights) {
+      try {
+        await insightDb.create(insight)
+      } catch (error) {
+        console.log('Sample insight already exists:', insight.title)
+      }
+    }
   }
 }
 
