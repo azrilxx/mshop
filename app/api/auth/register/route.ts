@@ -5,41 +5,33 @@ import { notificationService } from '@/lib/notification-service'
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, role } = await request.json()
+    const { email, password, role, companyName, fullName, phone, country } = await request.json()
 
     if (!email || !password || !role) {
-      return NextResponse.json(
-        { error: 'Email, password, and role are required' },
-        { status: 400 }
-      )
-    }
-
-    if (!['buyer', 'seller', 'admin'].includes(role)) {
-      return NextResponse.json(
-        { error: 'Invalid role' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
     const user = await userDb.create(email, password, role)
-    await createSession(user)
 
-    if (role === 'seller') {
-      try {
-        await notificationService.notifyNewSellerRegistration(user)
-      } catch (error) {
-        console.error('Failed to send new seller notification:', error)
-      }
+    // Update user with additional profile information
+    if (companyName || fullName || phone || country) {
+      await userDb.updateUser(email, {
+        companyName,
+        fullName,
+        phone,
+        country,
+        registeredAt: new Date().toISOString()
+      })
     }
 
-    return NextResponse.json(
-      { message: 'User created successfully', user: { id: user.id, email: user.email, role: user.role } },
-      { status: 201 }
-    )
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || 'Registration failed' },
-      { status: 400 }
-    )
+    return NextResponse.json({ 
+      message: 'User created successfully',
+      user: { id: user.id, email: user.email, role: user.role }
+    })
+  } catch (error) {
+    if (error instanceof Error) {
+      return NextResponse.json({ error: error.message }, { status: 400 })
+    }
+    return NextResponse.json({ error: 'Registration failed' }, { status: 500 })
   }
 }

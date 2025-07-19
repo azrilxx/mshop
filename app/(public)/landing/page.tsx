@@ -2,6 +2,7 @@
 import Link from 'next/link'
 import { landingDb } from '@/lib/landingDb'
 import { seedLandingData } from '@/scripts/seed-landing-data'
+import SearchBar from '@/components/SearchBar'
 
 export default async function LandingPage() {
   // Seed data if not exists
@@ -53,16 +54,19 @@ export default async function LandingPage() {
         style={{ backgroundImage: `url(${heroSection?.backgroundImage})` }}
       >
         <div className="absolute inset-0 bg-black bg-opacity-50"></div>
-        <div className="relative max-w-7xl mx-auto px-4 h-full flex items-center">
-          <div className="text-white max-w-3xl">
+        <div className="relative max-w-7xl mx-auto px-4 h-full flex flex-col justify-center">
+          <div className="text-center text-white mb-8">
             <h1 className="text-4xl md:text-6xl font-bold mb-4 leading-tight">
               {heroSection?.title || 'Discover Oil & Gas Equipment. Redefined.'}
             </h1>
             <p className="text-xl mb-8 text-gray-200">
               {heroSection?.subtitle || 'Connect with verified suppliers worldwide'}
             </p>
-            <Link href="/products" className="bg-orange-500 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-orange-600 transition-colors inline-block">
-              Browse Marketplace
+          </div>
+          <SearchBar />
+          <div className="mt-8 text-center">
+            <Link href="/products" className="bg-white text-orange-500 px-8 py-3 rounded-lg text-lg font-semibold hover:bg-gray-100 transition-colors inline-block shadow-lg">
+              Browse All Products
             </Link>
           </div>
         </div>

@@ -1,9 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { User } from '@/lib/db'
+import { useState, useEffect } from 'react'
+import LoginModal from './LoginModal'
 
 interface NavbarProps {
   user: User | null
@@ -13,6 +13,7 @@ export default function Navbar({ user }: NavbarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [showLoginModal, setShowLoginModal] = useState(false)
   const router = useRouter()
 
   const handleLogout = async () => {
@@ -183,9 +184,12 @@ export default function Navbar({ user }: NavbarProps) {
               </div>
             ) : (
               <div className="flex items-center space-x-3">
-                <Link href="/login" className="btn-ghost">
-                  Sign In
-                </Link>
+                <button 
+                onClick={() => setShowLoginModal(true)}
+                className="btn-ghost"
+              >
+                Sign In
+              </button>
                 <Link href="/register" className="btn-primary">
                   Get Started
                 </Link>
@@ -228,6 +232,10 @@ export default function Navbar({ user }: NavbarProps) {
           </div>
         )}
       </div>
+      <LoginModal 
+        isOpen={showLoginModal} 
+        onClose={() => setShowLoginModal(false)} 
+      />
     </nav>
   )
 }
