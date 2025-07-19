@@ -1,0 +1,81 @@
+/fix
+
+# CONTEXT
+You are working inside the `mshop` project on Replit. The system is production-ready and all major phases are complete. You will now implement a set of optional improvements to strengthen RFQ management, tagging UX, inventory logic, admin tools, and asset handling.
+
+---
+
+# OBJECTIVE
+Add operational improvements to enhance quote tracking, inventory awareness, tagging experience, asset structure, and admin visibility.
+
+---
+
+# FEATURES TO IMPLEMENT
+
+## 1. RFQ STATUS TRACKING
+- Extend RFQ model in Replit DB:
+```ts
+status: "submitted" | "viewed" | "responded" | "archived"
+```
+- Update seller dashboard (where RFQs are viewed):
+  - On open: mark RFQ as `viewed`
+  - Add dropdown or buttons to manually mark RFQ as `responded` or `archived`
+- Optional: use color badges for status display
+
+---
+
+## 2. INVENTORY CONTROL
+- Extend product model:
+```ts
+stock: number | null
+```
+- Add input field during product creation/edit:
+  - If left blank, stock = unlimited
+- Display stock remaining on product card and detail page
+
+---
+
+## 3. ADMIN DASHBOARD METRICS
+- Route: `/admin/metrics`
+- Show:
+  - Total buyers
+  - Total sellers
+  - Total products
+  - Total RFQs submitted
+- Use Replit DB key counts only (no charts needed)
+
+---
+
+## 4. TAGGING AUTOCOMPLETE
+- Create `lib/constants/tags.ts`:
+```ts
+export const POPULAR_TAGS = [
+  "Nickel Alloy", "Rental", "Sour Gas", "Inspection", "Valve", "CRA", "Geothermal", "Subsea", "Storage", "Welding"
+]
+```
+- In `TagInput.tsx`, add dropdown suggestion when typing based on this array
+- Filter options by partial match
+
+---
+
+## 5. PUBLIC ASSET NORMALIZATION
+- Move all landing images used in categories or products to `/public/assets/`
+- If images are currently in `/attached_assets/`, reassign image URLs to `/assets/filename.jpg`
+- Do not break existing render paths in the landing page or cards
+
+---
+
+# VALIDATION
+- Confirm that RFQ status updates persist in DB
+- Confirm stock field is optional but respected during display
+- Confirm admin metric counts load with DB latency fallback
+- Confirm tag suggestion dropdown does not allow unsafe input
+- Confirm no broken image links after public asset re-routing
+
+---
+
+# RETURN
+- List of files changed
+- Keys added to DB
+- Any defaults set (e.g. stock = null, status = "submitted")
+- Screens or components created or updated
