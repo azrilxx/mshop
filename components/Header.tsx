@@ -9,10 +9,10 @@ export default function Header() {
   const [showSignInDropdown, setShowSignInDropdown] = useState(false)
 
   return (
-    <header className="w-full bg-white sticky top-0 z-50">
-      {/* Top Navigation Bar - Alibaba Style */}
-      <div className="bg-gray-50 border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4">
+    <header className="sticky top-0 z-50 bg-white shadow">
+      <div className="max-w-screen-xl mx-auto px-4">
+        {/* Top Navigation Bar - Alibaba Style */}
+        <div className="bg-gray-50 border-b border-gray-200">
           <div className="flex items-center justify-between h-9 text-xs">
             {/* Left Section - Delivery and Language */}
             <div className="flex items-center space-x-4">
@@ -70,16 +70,14 @@ export default function Header() {
                 href="/register"
                 className="bg-orange-500 text-white px-3 py-1 rounded text-xs font-medium hover:bg-orange-600"
               >
-                Create account
+                Join Free
               </Link>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Main Header */}
-      <div className="bg-white">
-        <div className="max-w-7xl mx-auto px-4">
+        {/* Secondary Navigation */}
+        <div className="bg-white">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <Link href="/" className="text-2xl font-bold text-orange-500 mr-8">

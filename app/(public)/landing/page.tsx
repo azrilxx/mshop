@@ -18,35 +18,7 @@ export default async function LandingPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Top Navbar */}
-      <nav className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <Link href="/" className="text-2xl font-bold text-orange-500">
-                Muvex
-              </Link>
-            </div>
-            <div className="hidden md:flex space-x-8">
-              <Link href="/products" className="text-gray-700 hover:text-orange-500 font-medium">
-                Products
-              </Link>
-              <Link href="/services" className="text-gray-700 hover:text-orange-500 font-medium">
-                Services
-              </Link>
-              <Link href="/insights" className="text-gray-700 hover:text-orange-500 font-medium">
-                Insights
-              </Link>
-              <Link href="/login" className="text-gray-700 hover:text-orange-500 font-medium">
-                Sign In
-              </Link>
-              <Link href="/register" className="bg-orange-500 text-white px-6 py-2 rounded-lg hover:bg-orange-600 font-medium transition-colors">
-                Join Free
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+      
 
       {/* Hero Banner - Alibaba Style */}
       <section 
