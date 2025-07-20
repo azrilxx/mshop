@@ -104,6 +104,14 @@ export interface Storefront {
 }
 
 export class DatabaseOperations {
+  // Security middleware - Row Level Security equivalent
+  private async checkUserAccess(userId: string, resourceOwnerId: string, userRole?: string): Promise<boolean> {
+    // Admin bypass
+    if (userRole === 'admin') return true
+    // User can access their own resources
+    return userId === resourceOwnerId
+  }
+
   private async safeGet(key: string): Promise<any> {
     try {
       const result = await db.get(key)
@@ -120,6 +128,55 @@ export class DatabaseOperations {
     } catch (error) {
       console.error(`Database set error for key ${key}:`, error)
       throw error
+    }
+  }
+
+  // Performance optimization - In-memory indexes
+  private productIndexes: Map<string, string[]> = new Map()
+  private orderIndexes: Map<string, string[]> = new Map()
+  private ratingIndexes: Map<string, string[]> = new Map()
+
+  private async buildIndexes(): Promise<void> {
+    try {
+      // Build product indexes by merchant_id
+      const products = await this.getAllFromTable<Product>('products')
+      const productsByMerchant = new Map<string, string[]>()
+      products.forEach(product => {
+        if (!productsByMerchant.has(product.seller_id)) {
+          productsByMerchant.set(product.seller_id, [])
+        }
+        productsByMerchant.get(product.seller_id)?.push(product.id)
+      })
+      this.productIndexes = productsByMerchant
+
+      // Build order indexes
+      const orders = await this.getAllFromTable<Order>('orders')
+      const ordersByBuyer = new Map<string, string[]>()
+      const ordersBySeller = new Map<string, string[]>()
+      orders.forEach(order => {
+        if (!ordersByBuyer.has(order.buyer_id)) {
+          ordersByBuyer.set(order.buyer_id, [])
+        }
+        if (!ordersBySeller.has(order.seller_id)) {
+          ordersBySeller.set(order.seller_id, [])
+        }
+        ordersByBuyer.get(order.buyer_id)?.push(order.id)
+        ordersBySeller.get(order.seller_id)?.push(order.id)
+      })
+      this.orderIndexes = new Map([...ordersByBuyer, ...ordersBySeller])
+
+      // Build rating indexes by product_id
+      const ratings = await this.getAllFromTable<Rating>('ratings')
+      const ratingsByProduct = new Map<string, string[]>()
+      ratings.forEach(rating => {
+        if (!ratingsByProduct.has(rating.product_id)) {
+          ratingsByProduct.set(rating.product_id, [])
+        }
+        ratingsByProduct.get(rating.product_id)?.push(rating.id)
+      })
+      this.ratingIndexes = ratingsByProduct
+    } catch (error) {
+      console.error('Error building indexes:', error)
     }
   }
 
@@ -169,8 +226,12 @@ export class DatabaseOperations {
     }
   }
 
-  // User operations
+  // User operations with security checks
   async createUser(user: User): Promise<void> {
+    // Validate required fields
+    if (!user.email || !user.name || !user.role) {
+      throw new Error('Missing required user fields')
+    }
     await this.addToTable('users', user)
   }
 
@@ -179,41 +240,107 @@ export class DatabaseOperations {
     return users.find(user => user.email === email) || null
   }
 
-  async getUserById(id: string): Promise<User | null> {
+  async getUserById(id: string, requestingUserId?: string, requestingUserRole?: string): Promise<User | null> {
     const users = await this.getAllFromTable<User>('users')
-    return users.find(user => user.id === id) || null
+    const user = users.find(user => user.id === id) || null
+    
+    // Security check - users can only access their own profile unless admin
+    if (user && requestingUserId && !await this.checkUserAccess(requestingUserId, user.id, requestingUserRole)) {
+      return null
+    }
+    return user
   }
 
-  async updateUser(id: string, updates: Partial<User>): Promise<void> {
+  async updateUser(id: string, updates: Partial<User>, requestingUserId?: string, requestingUserRole?: string): Promise<void> {
+    // Security check
+    if (requestingUserId && !await this.checkUserAccess(requestingUserId, id, requestingUserRole)) {
+      throw new Error('Unauthorized access')
+    }
     await this.updateInTable('users', id, updates)
   }
 
-  // Product operations
-  async getProducts(): Promise<Product[]> {
-    return this.getAllFromTable<Product>('products')
+  // Product operations with security and performance optimization
+  async getProducts(requestingUserId?: string, requestingUserRole?: string): Promise<Product[]> {
+    const products = await this.getAllFromTable<Product>('products')
+    
+    // If not admin, only return active products or user's own products
+    if (requestingUserRole !== 'admin') {
+      return products.filter(product => 
+        product.status === 'active' || 
+        (requestingUserId && product.seller_id === requestingUserId)
+      )
+    }
+    return products
   }
 
-  async getProductsBySeller(sellerId: string): Promise<Product[]> {
+  async getProductsBySeller(sellerId: string, requestingUserId?: string, requestingUserRole?: string): Promise<Product[]> {
+    // Security check - users can only access their own products unless admin
+    if (requestingUserId && !await this.checkUserAccess(requestingUserId, sellerId, requestingUserRole)) {
+      throw new Error('Unauthorized access')
+    }
+    
+    // Use index if available for performance
+    await this.buildIndexes()
+    const productIds = this.productIndexes.get(sellerId) || []
+    const allProducts = await this.getProducts()
+    return allProducts.filter(product => productIds.includes(product.id))
+  }
+
+  async getProductById(id: string, requestingUserId?: string, requestingUserRole?: string): Promise<Product | null> {
     const products = await this.getProducts()
-    return products.filter(product => product.seller_id === sellerId)
+    const product = products.find(product => product.id === id) || null
+    
+    // Security check - non-active products only visible to owner or admin
+    if (product && product.status !== 'active' && requestingUserId) {
+      if (!await this.checkUserAccess(requestingUserId, product.seller_id, requestingUserRole)) {
+        return null
+      }
+    }
+    return product
   }
 
-  async getProductById(id: string): Promise<Product | null> {
-    const products = await this.getProducts()
-    return products.find(product => product.id === id) || null
-  }
-
-  async createProduct(product: Product): Promise<void> {
+  async createProduct(product: Product, requestingUserId: string): Promise<void> {
+    // Validate required fields
+    if (!product.name || !product.price || !product.seller_id) {
+      throw new Error('Missing required product fields')
+    }
+    
+    // Security check - users can only create products for themselves
+    if (product.seller_id !== requestingUserId) {
+      throw new Error('Unauthorized: Cannot create product for another user')
+    }
+    
     await this.addToTable('products', product)
+    // Update indexes
+    await this.buildIndexes()
   }
 
-  async updateProduct(id: string, updates: Partial<Product>): Promise<void> {
+  async updateProduct(id: string, updates: Partial<Product>, requestingUserId: string, requestingUserRole?: string): Promise<void> {
+    const product = await this.getProductById(id)
+    if (!product) {
+      throw new Error('Product not found')
+    }
+    
+    // Security check
+    if (!await this.checkUserAccess(requestingUserId, product.seller_id, requestingUserRole)) {
+      throw new Error('Unauthorized access')
+    }
+    
     await this.updateInTable('products', id, updates)
   }
 
-  // Advertisement operations
-  async getAdvertisements(): Promise<Advertisement[]> {
-    return this.getAllFromTable<Advertisement>('advertisements')
+  // Advertisement operations with security checks
+  async getAdvertisements(requestingUserId?: string, requestingUserRole?: string): Promise<Advertisement[]> {
+    const ads = await this.getAllFromTable<Advertisement>('advertisements')
+    
+    // If not admin, only return user's own ads or active public ads
+    if (requestingUserRole !== 'admin') {
+      return ads.filter(ad => 
+        ad.seller_id === requestingUserId || 
+        (ad.status === 'active' && new Date(ad.active_from) <= new Date() && new Date(ad.active_until) >= new Date())
+      )
+    }
+    return ads
   }
 
   async getActiveAdvertisements(): Promise<Advertisement[]> {
@@ -226,50 +353,151 @@ export class DatabaseOperations {
     )
   }
 
-  async getAdvertisementsBySeller(sellerId: string): Promise<Advertisement[]> {
+  async getAdvertisementsBySeller(sellerId: string, requestingUserId: string, requestingUserRole?: string): Promise<Advertisement[]> {
+    // Security check
+    if (!await this.checkUserAccess(requestingUserId, sellerId, requestingUserRole)) {
+      throw new Error('Unauthorized access')
+    }
+    
     const ads = await this.getAdvertisements()
     return ads.filter(ad => ad.seller_id === sellerId)
   }
 
-  async createAdvertisement(ad: Advertisement): Promise<void> {
+  async createAdvertisement(ad: Advertisement, requestingUserId: string): Promise<void> {
+    // Validate required fields
+    if (!ad.seller_id || !ad.title || !ad.active_from || !ad.active_until) {
+      throw new Error('Missing required advertisement fields')
+    }
+    
+    // Security check
+    if (ad.seller_id !== requestingUserId) {
+      throw new Error('Unauthorized: Cannot create advertisement for another user')
+    }
+    
     await this.addToTable('advertisements', ad)
   }
 
-  async updateAdvertisement(id: string, updates: Partial<Advertisement>): Promise<void> {
+  async updateAdvertisement(id: string, updates: Partial<Advertisement>, requestingUserId: string, requestingUserRole?: string): Promise<void> {
+    const ads = await this.getAllFromTable<Advertisement>('advertisements')
+    const ad = ads.find(a => a.id === id)
+    if (!ad) {
+      throw new Error('Advertisement not found')
+    }
+    
+    // Security check
+    if (!await this.checkUserAccess(requestingUserId, ad.seller_id, requestingUserRole)) {
+      throw new Error('Unauthorized access')
+    }
+    
     await this.updateInTable('advertisements', id, updates)
   }
 
-  // Order operations
-  async getOrders(): Promise<Order[]> {
-    return this.getAllFromTable<Order>('orders')
+  // Order operations with security and performance optimization
+  async getOrders(requestingUserId: string, requestingUserRole?: string): Promise<Order[]> {
+    const orders = await this.getAllFromTable<Order>('orders')
+    
+    // Security: only admins can see all orders
+    if (requestingUserRole === 'admin') {
+      return orders
+    }
+    
+    // Users can only see their own orders (as buyer or seller)
+    return orders.filter(order => 
+      order.buyer_id === requestingUserId || order.seller_id === requestingUserId
+    )
   }
 
-  async getOrdersBySeller(sellerId: string): Promise<Order[]> {
-    const orders = await this.getOrders()
-    return orders.filter(order => order.seller_id === sellerId)
+  async getOrdersBySeller(sellerId: string, requestingUserId: string, requestingUserRole?: string): Promise<Order[]> {
+    // Security check
+    if (!await this.checkUserAccess(requestingUserId, sellerId, requestingUserRole)) {
+      throw new Error('Unauthorized access')
+    }
+    
+    // Use index for performance
+    await this.buildIndexes()
+    const orderIds = this.orderIndexes.get(sellerId) || []
+    const allOrders = await this.getAllFromTable<Order>('orders')
+    return allOrders.filter(order => orderIds.includes(order.id) && order.seller_id === sellerId)
   }
 
-  async getOrdersByBuyer(buyerId: string): Promise<Order[]> {
-    const orders = await this.getOrders()
-    return orders.filter(order => order.buyer_id === buyerId)
+  async getOrdersByBuyer(buyerId: string, requestingUserId: string, requestingUserRole?: string): Promise<Order[]> {
+    // Security check
+    if (!await this.checkUserAccess(requestingUserId, buyerId, requestingUserRole)) {
+      throw new Error('Unauthorized access')
+    }
+    
+    // Use index for performance
+    await this.buildIndexes()
+    const orderIds = this.orderIndexes.get(buyerId) || []
+    const allOrders = await this.getAllFromTable<Order>('orders')
+    return allOrders.filter(order => orderIds.includes(order.id) && order.buyer_id === buyerId)
   }
 
-  async createOrder(order: Order): Promise<void> {
+  async createOrder(order: Order, requestingUserId: string): Promise<void> {
+    // Validate required fields
+    if (!order.buyer_id || !order.seller_id || !order.product_id || !order.total_price) {
+      throw new Error('Missing required order fields')
+    }
+    
+    // Security check - users can only create orders as buyers
+    if (order.buyer_id !== requestingUserId) {
+      throw new Error('Unauthorized: Cannot create order for another user')
+    }
+    
     await this.addToTable('orders', order)
+    // Update indexes
+    await this.buildIndexes()
   }
 
-  async updateOrder(id: string, updates: Partial<Order>): Promise<void> {
+  async updateOrder(id: string, updates: Partial<Order>, requestingUserId: string, requestingUserRole?: string): Promise<void> {
+    const orders = await this.getAllFromTable<Order>('orders')
+    const order = orders.find(o => o.id === id)
+    if (!order) {
+      throw new Error('Order not found')
+    }
+    
+    // Security check - buyers and sellers can update their orders
+    const canAccess = order.buyer_id === requestingUserId || 
+                     order.seller_id === requestingUserId || 
+                     requestingUserRole === 'admin'
+    
+    if (!canAccess) {
+      throw new Error('Unauthorized access')
+    }
+    
     await this.updateInTable('orders', id, updates)
   }
 
-  // Rating operations
+  // Rating operations with security and performance optimization
   async getRatingsByProduct(productId: string): Promise<Rating[]> {
-    const ratings = await this.getAllFromTable<Rating>('ratings')
-    return ratings.filter(rating => rating.product_id === productId)
+    // Use index for performance
+    await this.buildIndexes()
+    const ratingIds = this.ratingIndexes.get(productId) || []
+    const allRatings = await this.getAllFromTable<Rating>('ratings')
+    return allRatings.filter(rating => ratingIds.includes(rating.id))
   }
 
-  async createRating(rating: Rating): Promise<void> {
+  async createRating(rating: Rating, requestingUserId: string): Promise<void> {
+    // Validate required fields
+    if (!rating.product_id || !rating.user_id || !rating.rating || rating.rating < 1 || rating.rating > 5) {
+      throw new Error('Invalid rating data')
+    }
+    
+    // Security check - users can only create ratings as themselves
+    if (rating.user_id !== requestingUserId) {
+      throw new Error('Unauthorized: Cannot create rating for another user')
+    }
+    
+    // Check for duplicate ratings
+    const existingRatings = await this.getRatingsByProduct(rating.product_id)
+    const existingRating = existingRatings.find(r => r.user_id === requestingUserId)
+    if (existingRating) {
+      throw new Error('User has already rated this product')
+    }
+    
     await this.addToTable('ratings', rating)
+    // Update indexes
+    await this.buildIndexes()
   }
 
   // Plan operations
@@ -315,26 +543,84 @@ export class DatabaseOperations {
     return this.getAllFromTable<any>('insights')
   }
 
-  // Storefront operations
-  async getStorefronts(): Promise<Storefront[]> {
-    return this.getAllFromTable<Storefront>('storefronts')
+  // Storefront operations with security checks
+  async getStorefronts(requestingUserId?: string, requestingUserRole?: string): Promise<Storefront[]> {
+    const storefronts = await this.getAllFromTable<Storefront>('storefronts')
+    
+    // If not admin, only return user's own storefront or active public ones
+    if (requestingUserRole !== 'admin') {
+      return storefronts.filter(store => 
+        store.merchant_id === requestingUserId || 
+        store.status === 'active'
+      )
+    }
+    return storefronts
   }
 
   async getStorefrontBySlug(slug: string): Promise<Storefront | null> {
     const storefronts = await this.getStorefronts()
-    return storefronts.find(store => store.slug === slug) || null
+    const storefront = storefronts.find(store => store.slug === slug) || null
+    
+    // Public storefronts are visible to all
+    if (storefront && storefront.status === 'active') {
+      return storefront
+    }
+    return null
   }
 
-  async getStorefrontByMerchant(merchantId: string): Promise<Storefront | null> {
+  async getStorefrontByMerchant(merchantId: string, requestingUserId?: string, requestingUserRole?: string): Promise<Storefront | null> {
+    // Security check for private access
+    if (requestingUserId && !await this.checkUserAccess(requestingUserId, merchantId, requestingUserRole)) {
+      // Return only if storefront is public
+      const storefronts = await this.getStorefronts()
+      const storefront = storefronts.find(store => store.merchant_id === merchantId) || null
+      return (storefront && storefront.status === 'active') ? storefront : null
+    }
+    
     const storefronts = await this.getStorefronts()
     return storefronts.find(store => store.merchant_id === merchantId) || null
   }
 
-  async createStorefront(storefront: Storefront): Promise<void> {
+  async createStorefront(storefront: Storefront, requestingUserId: string): Promise<void> {
+    // Validate required fields
+    if (!storefront.merchant_id || !storefront.store_name || !storefront.slug) {
+      throw new Error('Missing required storefront fields')
+    }
+    
+    // Security check
+    if (storefront.merchant_id !== requestingUserId) {
+      throw new Error('Unauthorized: Cannot create storefront for another user')
+    }
+    
+    // Check for duplicate slug
+    const existingStorefront = await this.getStorefrontBySlug(storefront.slug)
+    if (existingStorefront) {
+      throw new Error('Storefront slug already exists')
+    }
+    
     await this.addToTable('storefronts', storefront)
   }
 
-  async updateStorefront(id: string, updates: Partial<Storefront>): Promise<void> {
+  async updateStorefront(id: string, updates: Partial<Storefront>, requestingUserId: string, requestingUserRole?: string): Promise<void> {
+    const storefronts = await this.getAllFromTable<Storefront>('storefronts')
+    const storefront = storefronts.find(s => s.id === id)
+    if (!storefront) {
+      throw new Error('Storefront not found')
+    }
+    
+    // Security check
+    if (!await this.checkUserAccess(requestingUserId, storefront.merchant_id, requestingUserRole)) {
+      throw new Error('Unauthorized access')
+    }
+    
+    // If updating slug, check for duplicates
+    if (updates.slug && updates.slug !== storefront.slug) {
+      const existingStorefront = await this.getStorefrontBySlug(updates.slug)
+      if (existingStorefront) {
+        throw new Error('Storefront slug already exists')
+      }
+    }
+    
     await this.updateInTable('storefronts', id, updates)
   }
 
@@ -382,4 +668,11 @@ export class DatabaseOperations {
   }
 }
 
+// Initialize database operations and build indexes
 export const dbOps = new DatabaseOperations()
+
+// Initialize indexes on startup
+if (typeof window === 'undefined') {
+  // Only run on server side
+  dbOps.buildIndexes().catch(console.error)
+}
