@@ -9,6 +9,7 @@ export default function SellerDashboard() {
   const [products, setProducts] = useState<any[]>([])
   const [orders, setOrders] = useState<any[]>([])
   const [ads, setAds] = useState<any[]>([])
+  const [storefront, setStorefront] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -18,25 +19,36 @@ export default function SellerDashboard() {
 
   const fetchData = async () => {
     try {
-      const [productsRes, ordersRes, adsRes] = await Promise.all([
+      // Get session first to get user ID
+      const sessionRes = await fetch('/api/auth/session')
+      const sessionData = await sessionRes.json()
+      
+      if (!sessionData.user) {
+        throw new Error('User not authenticated')
+      }
+
+      const [productsRes, ordersRes, adsRes, storefrontRes] = await Promise.all([
         fetch('/api/products?userProducts=true'),
         fetch('/api/orders'),
-        fetch('/api/ads')
+        fetch('/api/ads'),
+        fetch(`/api/storefront?merchantId=${sessionData.user.id}`)
       ])
 
       if (!productsRes.ok || !ordersRes.ok || !adsRes.ok) {
         throw new Error('Failed to fetch data')
       }
 
-      const [productsData, ordersData, adsData] = await Promise.all([
+      const [productsData, ordersData, adsData, storefrontData] = await Promise.all([
         productsRes.json(),
         ordersRes.json(),
-        adsRes.json()
+        adsRes.json(),
+        storefrontRes.json()
       ])
 
       setProducts(productsData)
       setOrders(ordersData)
       setAds(adsData)
+      setStorefront(storefrontData.storefront)
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -60,9 +72,26 @@ export default function SellerDashboard() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">Seller Dashboard</h1>
-        <div className="text-sm bg-blue-100 text-blue-800 px-3 py-1 rounded-full">
-          {plan.tier.charAt(0).toUpperCase() + plan.tier.slice(1)} Plan
+        <div>
+          <h1 className="text-3xl font-bold">Seller Dashboard</h1>
+          {storefront && (
+            <p className="text-gray-600 mt-1">
+              {storefront.store_name} • <Link href={`/store/${storefront.slug}`} className="text-blue-600 hover:underline">/store/{storefront.slug}</Link>
+            </p>
+          )}
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="text-sm bg-blue-100 text-blue-800 px-3 py-1 rounded-full">
+            {plan.tier.charAt(0).toUpperCase() + plan.tier.slice(1)} Plan
+          </div>
+          {!storefront && (
+            <Link
+              href="/seller/storefront"
+              className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 text-sm"
+            >
+              Create Storefront
+            </Link>
+          )}
         </div>
       </div>
 
@@ -233,6 +262,28 @@ export default function SellerDashboard() {
             </div>
           </div>
         </div>
+
+        <Link
+          href="/seller/storefront"
+          className="block p-6 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
+        >
+          <div className="flex items-center">
+            <div className="p-2 bg-green-100 rounded-lg">
+              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H9m0 0H7m2 0v-6a2 2 0 012-2h2a2 2 0 012 2v6" />
+              </svg>
+            </div>
+            <div className="ml-4">
+              <h3 className="text-lg font-semibold">Manage Storefront</h3>
+              <p className="text-gray-600 text-sm">
+                {storefront 
+                  ? 'Update store info & branding'
+                  : 'Create your public storefront'
+                }
+              </p>
+            </div>
+          </div>
+        </Link>
 
         <Link
           href="/seller/reports"

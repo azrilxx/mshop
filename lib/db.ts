@@ -1,7 +1,30 @@
-import Database from '@replit/database'
+// Fix for server-side usage of @replit/database
+let Database: any
+let db: any
 
-// Initialize database client properly for server-side usage
-const db = new Database()
+if (typeof window === 'undefined') {
+  // Server-side: dynamically import and handle fetch polyfill
+  try {
+    if (!global.fetch) {
+      global.fetch = require('node-fetch')
+    }
+    Database = require('@replit/database')
+    db = new Database()
+  } catch (error) {
+    console.error('Failed to initialize Replit Database:', error)
+    // Fallback to mock implementation for development
+    db = {
+      get: async (key: string) => null,
+      set: async (key: string, value: any) => {},
+      delete: async (key: string) => {},
+      list: async (prefix?: string) => []
+    }
+  }
+} else {
+  // Client-side: use regular import
+  Database = require('@replit/database')
+  db = new Database()
+}
 
 export interface User {
   id: string
@@ -61,6 +84,23 @@ export interface Rating {
   rating: number
   comment: string
   created_at: string
+}
+
+export interface Storefront {
+  id: string
+  merchant_id: string
+  store_name: string
+  slug: string
+  bio: string
+  logo_url?: string
+  banner_url?: string
+  custom_domain?: string
+  contact_email?: string
+  contact_phone?: string
+  address?: string
+  status: 'active' | 'inactive' | 'pending'
+  created_at: string
+  updated_at: string
 }
 
 export class DatabaseOperations {
@@ -273,6 +313,72 @@ export class DatabaseOperations {
   // Insights operations
   async getInsights(): Promise<any[]> {
     return this.getAllFromTable<any>('insights')
+  }
+
+  // Storefront operations
+  async getStorefronts(): Promise<Storefront[]> {
+    return this.getAllFromTable<Storefront>('storefronts')
+  }
+
+  async getStorefrontBySlug(slug: string): Promise<Storefront | null> {
+    const storefronts = await this.getStorefronts()
+    return storefronts.find(store => store.slug === slug) || null
+  }
+
+  async getStorefrontByMerchant(merchantId: string): Promise<Storefront | null> {
+    const storefronts = await this.getStorefronts()
+    return storefronts.find(store => store.merchant_id === merchantId) || null
+  }
+
+  async createStorefront(storefront: Storefront): Promise<void> {
+    await this.addToTable('storefronts', storefront)
+  }
+
+  async updateStorefront(id: string, updates: Partial<Storefront>): Promise<void> {
+    await this.updateInTable('storefronts', id, updates)
+  }
+
+  async generateUniqueSlug(baseName: string): Promise<string> {
+    const baseSlug = baseName
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .trim()
+
+    const storefronts = await this.getStorefronts()
+    let counter = 0
+    let slug = baseSlug
+
+    while (storefronts.find(store => store.slug === slug)) {
+      counter++
+      slug = `${baseSlug}-${counter}`
+    }
+
+    return slug
+  }
+
+  // Enhanced product operations with merchant filtering
+  async getProductsByMerchant(merchantId: string): Promise<Product[]> {
+    const products = await this.getProducts()
+    return products.filter(product => product.seller_id === merchantId)
+  }
+
+  async getPublicProductsByMerchant(merchantId: string): Promise<Product[]> {
+    const products = await this.getProductsByMerchant(merchantId)
+    return products.filter(product => product.status === 'active')
+  }
+
+  // Enhanced order operations with merchant filtering
+  async getOrdersByMerchantId(merchantId: string): Promise<Order[]> {
+    const orders = await this.getOrders()
+    return orders.filter(order => order.seller_id === merchantId)
+  }
+
+  // Enhanced advertisement operations with merchant filtering
+  async getAdsByMerchant(merchantId: string): Promise<Advertisement[]> {
+    const ads = await this.getAdvertisements()
+    return ads.filter(ad => ad.seller_id === merchantId)
   }
 }
 
