@@ -59,13 +59,13 @@ export default function SellerDashboard() {
           <div>
             <p className="text-sm text-gray-600">Products Used</p>
             <p className="text-lg font-semibold">
-              {usage.product_created} / {plan.maxProducts === -1 ? '∞' : plan.maxProducts}
+              {usage.productsCreated} / {plan.maxProducts === -1 ? '∞' : plan.maxProducts}
             </p>
           </div>
           <div>
             <p className="text-sm text-gray-600">Ad Slots Used</p>
             <p className="text-lg font-semibold">
-              {usage.ads_created} / {plan.maxAdSlots === -1 ? '∞' : plan.maxAdSlots}
+              {usage.adsCreated} / {plan.maxAdSlots === -1 ? '∞' : plan.maxAdSlots}
             </p>
           </div>
         </div>
@@ -103,13 +103,13 @@ export default function SellerDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <Link 
           href="/seller/products/create" 
-          className={`bg-blue-600 text-white p-4 rounded-lg text-center hover:bg-blue-700 ${!featureAccess.createProducts ? 'opacity-50 cursor-not-allowed' : ''}`}
+          className={`bg-blue-600 text-white p-4 rounded-lg text-center hover:bg-blue-700 ${!featureAccess?.canCreateProducts ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
           Add New Product
         </Link>
         <Link 
           href="/seller/ads/create" 
-          className={`bg-green-600 text-white p-4 rounded-lg text-center hover:bg-green-700 ${!featureAccess.createAds ? 'opacity-50 cursor-not-allowed' : ''}`}
+          className={`bg-green-600 text-white p-4 rounded-lg text-center hover:bg-green-700 ${!featureAccess?.canCreateAds ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
           Create Advertisement
         </Link>
@@ -146,7 +146,7 @@ export default function SellerDashboard() {
             <h2 className="text-xl font-semibold">Your Products</h2>
             <Link 
               href="/seller/products/create" 
-              className={`bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 ${!featureAccess.createProducts ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 ${!featureAccess?.canCreateProducts ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               Add Product
             </Link>

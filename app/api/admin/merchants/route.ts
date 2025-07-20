@@ -6,7 +6,7 @@ import { userDb, productDb } from '@/lib/db'
 export async function GET() {
   try {
     const session = await getSession()
-    if (!session || session.role !== 'admin') {
+    if (!session || session.user.role !== 'admin') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -21,7 +21,7 @@ export async function GET() {
 export async function PATCH(request: NextRequest) {
   try {
     const session = await getSession()
-    if (!session || session.role !== 'admin') {
+    if (!session || session.user.role !== 'admin') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -37,7 +37,7 @@ export async function PATCH(request: NextRequest) {
       await userDb.suspend(sellerId)
       
       // Optionally hide their products
-      const sellerProducts = await productDb.getBySeller(sellerId)
+      const sellerProducts = await productDb.findByMerchant(sellerId)
       for (const product of sellerProducts) {
         await productDb.update(product.id, { status: 'inactive' })
       }

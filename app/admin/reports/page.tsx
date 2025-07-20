@@ -3,11 +3,11 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { getSession } from '@/lib/auth'
+import { requireClientRole } from '@/lib/auth-client'
 import { reportDb, productDb, type Report, type Product } from '@/lib/db'
 
 interface ReportWithProduct extends Report {
-  product?: Product
+  product?: Product | null
 }
 
 export default function ReportsPage() {
@@ -22,11 +22,7 @@ export default function ReportsPage() {
 
   const checkAuth = async () => {
     try {
-      const userSession = await getSession()
-      if (!userSession || userSession.role !== 'admin') {
-        router.push('/login')
-        return
-      }
+      const userSession = await requireClientRole(['admin'])
       setSession(userSession)
       await loadReports()
     } catch (error) {
@@ -40,7 +36,7 @@ export default function ReportsPage() {
       const allReports = await reportDb.getAll()
       const reportsWithProducts = await Promise.all(
         allReports.map(async (report) => {
-          const product = await productDb.getById(report.productId)
+          const product = await productDb.findById(report.productId)
           return { ...report, product }
         })
       )
@@ -134,7 +130,7 @@ export default function ReportsPage() {
                           Product: {report.product.name} - ${report.product.price}
                         </p>
                         <p className="text-sm text-gray-600">
-                          Seller: {report.product.sellerId}
+                          Seller: {report.product.merchantId}
                         </p>
                       </div>
                     )}

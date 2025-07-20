@@ -5,7 +5,7 @@ import { reportDb } from '@/lib/db'
 export async function POST(request: NextRequest) {
   try {
     const session = await getSession()
-    if (!session || session.role !== 'buyer') {
+    if (!session || session.user.role !== 'buyer') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
 
     const report = await reportDb.create({
       productId,
-      reporterId: session.id,
+      reporterId: session.user.id,
       category,
       description,
       contact
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const session = await getSession()
-    if (!session || session.role !== 'admin') {
+    if (!session || session.user.role !== 'admin') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

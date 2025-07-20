@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { getSession } from '@/lib/auth'
+import { requireClientRole } from '@/lib/auth-client'
 import { userDb, type User } from '@/lib/db'
 
 export default function MerchantsPage() {
@@ -17,11 +17,7 @@ export default function MerchantsPage() {
 
   const checkAuth = async () => {
     try {
-      const userSession = await getSession()
-      if (!userSession || userSession.role !== 'admin') {
-        router.push('/login')
-        return
-      }
+      const userSession = await requireClientRole(['admin'])
       setSession(userSession)
       await loadUnverifiedSellers()
     } catch (error) {
@@ -96,16 +92,14 @@ export default function MerchantsPage() {
               <div key={seller.id} className="bg-white rounded-lg shadow p-6">
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-900">{seller.name}</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">{seller.fullName || seller.email}</h3>
                     <p className="text-gray-600">{seller.email}</p>
                     <p className="text-sm text-gray-500 mt-1">
                       Applied: {new Date(seller.createdAt).toLocaleDateString()}
                     </p>
-                    {seller.lastLogin && (
-                      <p className="text-sm text-gray-500">
-                        Last Login: {new Date(seller.lastLogin).toLocaleDateString()}
-                      </p>
-                    )}
+                    <p className="text-sm text-gray-500">
+                      Status: Pending Verification
+                    </p>
                   </div>
 
                   <div className="flex space-x-3 ml-6">

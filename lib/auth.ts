@@ -58,3 +58,8 @@ export async function requireRole(allowedRoles: string[]): Promise<User> {
   }
   return user
 }
+
+export async function getUser(): Promise<User | null> {
+  const session = await getSession()
+  return session?.user || null
+}

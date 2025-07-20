@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
           socialProvider: provider,
           socialId: profile.id,
           profileImage: profile.picture || profile.avatar_url,
-          isVerified: true // Social accounts are pre-verified
+          is_verified: true // Social accounts are pre-verified
         }
       )
     } else if (!user.socialProvider) {

@@ -1,4 +1,6 @@
 
+'use client'
+
 import { useState, useEffect } from 'react'
 import { planDb, planUsageDb } from './db'
 import { getPlanLimits, canCreateProduct, canCreateAd, canGenerateReport, getRemainingProducts, getRemainingAds, getRemainingReports } from './plan'
@@ -154,4 +156,26 @@ export function usePlanAccess(tier: 'Free' | 'Standard' | 'Premium') {
 
 export function checkFeatureAccess(tier: 'Free' | 'Standard' | 'Premium', feature: string): boolean {
   return hasFeature(tier, feature)
+}
+
+export function useFeatureAccess(feature: string) {
+  const [hasAccess, setHasAccess] = useState(false)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function checkAccess() {
+      try {
+        // For now, assume all features are accessible
+        // This would be enhanced based on actual plan validation
+        setHasAccess(true)
+      } catch (error) {
+        setHasAccess(false)
+      } finally {
+        setLoading(false)
+      }
+    }
+    checkAccess()
+  }, [feature])
+
+  return { hasAccess, loading }
 }

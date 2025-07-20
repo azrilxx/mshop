@@ -48,44 +48,14 @@ export async function POST(request: Request) {
 
     // Send notification to seller
     try {
-      const whatsappMessage = `New quote request for ${product.name}\n\nFrom: ${name} (${email})\nQuantity: ${quantity}\nRegion: ${region}\n\nMessage: ${message}`
-      
       if (seller.whatsappNumber) {
-        // WhatsApp notification will be handled on the client side
         console.log('WhatsApp notification available for seller:', seller.whatsappNumber)
       }
 
-      // Email notification
+      // Email notification - TODO: Implement proper email service integration
       if (seller.email && seller.notifyOrder) {
-        await emailService.sendEmail({
-          to: seller.email,
-          subject: `New Quote Request: ${product.name}`,
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <h2 style="color: #2563eb;">New Quote Request</h2>
-              
-              <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                <h3 style="margin-top: 0;">Product: ${product.name}</h3>
-                <p><strong>Price:</strong> $${product.price.toLocaleString()}</p>
-              </div>
-              
-              <div style="background: #fff; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
-                <h4>Buyer Information:</h4>
-                <p><strong>Name:</strong> ${name}</p>
-                <p><strong>Email:</strong> ${email}</p>
-                <p><strong>Quantity:</strong> ${quantity}</p>
-                <p><strong>Delivery Region:</strong> ${region}</p>
-                
-                <h4>Message:</h4>
-                <p style="background: #f8fafc; padding: 15px; border-radius: 4px;">${message}</p>
-              </div>
-              
-              <div style="margin-top: 20px; text-align: center;">
-                <p>Reply directly to this email to respond to the buyer.</p>
-              </div>
-            </div>
-          `
-        })
+        console.log(`Email notification would be sent to ${seller.email} for RFQ on ${product.name}`)
+        // await emailService.sendTransactionalEmail(...)
       }
     } catch (notificationError) {
       console.error('Failed to send notification:', notificationError)

@@ -132,7 +132,7 @@ export default function Header() {
               <div className="flex items-center space-x-1 text-white hover:text-orange-400 cursor-pointer">
                 <ShoppingCart className="w-4 h-4" />
               </div>
-            </nav>
+            </div>
 
             {/* Mobile Menu */}
             <button className="lg:hidden p-2 ml-4 text-white">

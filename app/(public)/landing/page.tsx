@@ -261,7 +261,7 @@ export default async function LandingPage() {
                     {product.name}
                   </h3>
                   <p className="text-orange-500 font-bold text-lg mb-1">
-                    ${product.price.toLocaleString()}
+                    ${(product.price || 0).toLocaleString()}
                   </p>
                   <p className="text-gray-500 text-sm mb-3">{product.region}</p>
                   <div className="flex flex-wrap gap-1">

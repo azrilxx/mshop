@@ -213,7 +213,7 @@ export interface PlanUsage {
 }
 
 export const reportDb = {
-  async create(report: Omit<Report, 'id' | 'createdAt'>): Promise<Report> {
+  async create(report: Omit<Report, 'id' | 'createdAt' | 'status'>): Promise<Report> {
     const newReport: Report = {
       ...report,
       id: uuidv4(),
@@ -1032,7 +1032,6 @@ export const commentDb = {
 export const quoteDb = {
   async create(quote: Omit<Quote, 'id' | 'createdAt'>): Promise<Quote> {
     const newQuote: Quote = {
-      ...```text
       ...quote,
       id: uuidv4(),
       createdAt: new Date().toISOString()
@@ -1060,7 +1059,7 @@ export const quoteDb = {
     const keys = await db.list('quote:')
     const quotes: Quote[] = []
 
-    for (const keys) {
+    for (const key of keys) {
       const quote = await db.get(key) as Quote
       if (quote) {
         const product = await productDb.findById(quote.productId)
@@ -1233,4 +1232,53 @@ export async function initializeSampleData() {
   }
 }
 
+// Category database operations (stub implementation)
+export const categoryDb = {
+  async getAll(): Promise<Category[]> {
+    const keys = await db.list('category:')
+    const categories: Category[] = []
+    for (const key of keys) {
+      const category = await db.get(key)
+      if (category) categories.push(category as Category)
+    }
+    return categories
+  },
+
+  async create(category: Omit<Category, 'id'>): Promise<Category> {
+    const newCategory: Category = {
+      ...category,
+      id: uuidv4()
+    }
+    await db.set(`category:${newCategory.id}`, newCategory)
+    return newCategory
+  },
+
+  async update(id: string, updates: Partial<Category>): Promise<Category | null> {
+    const category = await db.get(`category:${id}`) as Category
+    if (!category) return null
+    
+    const updatedCategory = { ...category, ...updates }
+    await db.set(`category:${id}`, updatedCategory)
+    return updatedCategory
+  },
+
+  async delete(id: string): Promise<boolean> {
+    const category = await db.get(`category:${id}`)
+    if (!category) return false
+    
+    await db.delete(`category:${id}`)
+    return true
+  },
+
+  async archive(id: string): Promise<boolean> {
+    const category = await db.get(`category:${id}`) as Category
+    if (!category) return false
+    
+    const archivedCategory = { ...category, archived: true }
+    await db.set(`category:${id}`, archivedCategory)
+    return true
+  }
+}
+
+export { db }
 export default db

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { getSession } from '@/lib/auth'
+import { getClientSession } from '@/lib/auth-client'
 
 interface Product {
   id: string
@@ -14,7 +14,7 @@ interface Product {
   tags?: string[]
   sellerName?: string
   sellerVerified?: boolean
-  stock?: number
+  stock: number | null
 }
 
 interface ProductCardProps {
@@ -28,7 +28,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 
   useEffect(() => {
     async function checkAuth() {
-      const session = await getSession()
+      const session = await getClientSession()
       setUser(session?.user || null)
 
       if (session?.user?.bookmarks) {

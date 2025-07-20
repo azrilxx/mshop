@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { getSession } from '@/lib/auth'
+import { requireClientRole } from '@/lib/auth-client'
 import { categoryDb, type Category } from '@/lib/db'
 
 export default function CategoriesPage() {
@@ -21,11 +21,7 @@ export default function CategoriesPage() {
 
   const checkAuth = async () => {
     try {
-      const userSession = await getSession()
-      if (!userSession || userSession.role !== 'admin') {
-        router.push('/login')
-        return
-      }
+      const userSession = await requireClientRole(['admin'])
       setSession(userSession)
       await loadCategories()
     } catch (error) {

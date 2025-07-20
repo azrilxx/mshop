@@ -6,7 +6,7 @@ import { reportDb, productDb } from '@/lib/db'
 export async function GET() {
   try {
     const session = await getSession()
-    if (!session || session.role !== 'admin') {
+    if (!session || session.user.role !== 'admin') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -21,7 +21,7 @@ export async function GET() {
 export async function PATCH(request: NextRequest) {
   try {
     const session = await getSession()
-    if (!session || session.role !== 'admin') {
+    if (!session || session.user.role !== 'admin') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -30,7 +30,7 @@ export async function PATCH(request: NextRequest) {
     if (action === 'reviewed') {
       await reportDb.update(productId, reportId, { 
         status: 'reviewed',
-        reviewedAt: new Date()
+        reviewedAt: new Date().toISOString()
       })
       return NextResponse.json({ success: true, message: 'Report marked as reviewed' })
     }
@@ -42,7 +42,7 @@ export async function PATCH(request: NextRequest) {
       // Mark report as resolved
       await reportDb.update(productId, reportId, { 
         status: 'resolved',
-        reviewedAt: new Date(),
+        reviewedAt: new Date().toISOString(),
         adminNotes: 'Product suspended due to abuse report'
       })
       

@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import ProductCard from '@/components/ProductCard'
-import { getSession } from '@/lib/auth'
+import { requireClientRole } from '@/lib/auth-client'
 
 interface RFQ {
   id: string
@@ -25,6 +25,7 @@ interface Product {
   description: string
   images: string[]
   merchantId: string
+  stock: number | null
 }
 
 export default function BuyerDashboard() {
@@ -39,17 +40,7 @@ export default function BuyerDashboard() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const session = await getSession()
-        if (!session?.user) {
-          router.push('/login')
-          return
-        }
-
-        if (session.user.role !== 'buyer') {
-          router.push('/dashboard')
-          return
-        }
-
+        const session = await requireClientRole(['buyer'])
         setUser(session.user)
 
         // Fetch RFQs
@@ -105,7 +96,7 @@ export default function BuyerDashboard() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Navbar />
+        <Navbar user={user} />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="animate-pulse">
             <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
@@ -123,7 +114,7 @@ export default function BuyerDashboard() {
   if (error) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Navbar />
+        <Navbar user={user} />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="bg-red-50 border border-red-200 rounded-md p-4">
             <h3 className="text-red-800 font-medium">Error</h3>
@@ -136,7 +127,7 @@ export default function BuyerDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar />
+      <Navbar user={user} />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">

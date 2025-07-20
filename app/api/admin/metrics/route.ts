@@ -9,7 +9,7 @@ const db = new Database(process.env.REPLIT_DB_URL)
 export async function GET() {
   try {
     const session = await getSession()
-    if (!session || session.role !== 'admin') {
+    if (!session || session.user.role !== 'admin') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

@@ -79,7 +79,10 @@ export async function POST(request: NextRequest) {
       status: 'active',
       images: images || [],
       listingType: listingType || 'fixed',
-      location: location || { city: '', country: '' }
+      location: location || { city: '', country: '' },
+      certifications: [],
+      tags: [],
+      stock: null
     })
 
     // Update usage tracking

@@ -89,7 +89,7 @@ export default function ShopPage() {
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-8">Oil & Gas Equipment Marketplace</h1>
 
-      <AdBanner />
+      {/* AdBanner removed until ad data is available */}
 
       <ProductFilterForm onFilterChange={handleFilterChange} />
 

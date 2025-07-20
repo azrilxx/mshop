@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
-import { getSession } from '@/lib/auth'
+import { getClientSession } from '@/lib/auth-client'
 import { productDb } from '@/lib/db'
 
 interface Product {
@@ -36,7 +36,7 @@ export default function QuotePage({ params }: { params: { productId: string } })
   useEffect(() => {
     async function fetchData() {
       try {
-        const session = await getSession()
+        const session = await getClientSession()
         setUser(session?.user || null)
 
         const response = await fetch(`/api/products?id=${params.productId}`)
@@ -124,7 +124,7 @@ export default function QuotePage({ params }: { params: { productId: string } })
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Navbar />
+        <Navbar user={user} />
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="bg-white rounded-lg shadow p-6">
             <div className="animate-pulse">
@@ -145,7 +145,7 @@ export default function QuotePage({ params }: { params: { productId: string } })
   if (error && !product) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Navbar />
+        <Navbar user={user} />
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="bg-white rounded-lg shadow p-6">
             <div className="text-center">
@@ -166,7 +166,7 @@ export default function QuotePage({ params }: { params: { productId: string } })
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar />
+      <Navbar user={user} />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="bg-white rounded-lg shadow">
           {/* Product Summary */}

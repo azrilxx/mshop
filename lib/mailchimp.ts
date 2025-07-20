@@ -340,7 +340,6 @@ class EmailService {
 
     return result
   }
-}
 
   async sendAbandonedCartEmail(
     recipient: EmailRecipient,

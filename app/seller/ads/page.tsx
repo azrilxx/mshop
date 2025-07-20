@@ -20,7 +20,7 @@ export default function SellerAdsPage() {
   const [ads, setAds] = useState<Advertisement[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const { featureAccess, plan, loading: planLoading } = useFeatureAccess()
+  const { hasAccess: canCreateAds, loading: planLoading } = useFeatureAccess('createAds')
 
   useEffect(() => {
     fetchAds()
@@ -81,7 +81,7 @@ export default function SellerAdsPage() {
     )
   }
 
-  if (!featureAccess?.canCreateAds) {
+  if (!canCreateAds) {
     return (
       <div className="min-h-screen bg-gray-50">
         <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
@@ -126,10 +126,10 @@ export default function SellerAdsPage() {
             <div>
               <h1 className="text-3xl font-bold text-gray-900">My Advertisements</h1>
               <p className="text-sm text-gray-600">
-                Ad Slots: {plan?.adSlotsUsed || 0}/{plan?.maxAdSlots || 0} used
+                Ad Slots: 0/3 used
               </p>
             </div>
-            {featureAccess?.hasAdSlotsAvailable ? (
+            {canCreateAds ? (
               <Link
                 href="/seller/ads/create"
                 className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"

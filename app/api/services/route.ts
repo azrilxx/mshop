@@ -32,10 +32,12 @@ export async function POST(request: NextRequest) {
     }
 
     const service = await serviceDb.create({
+      title: serviceType,
       serviceType,
       description,
       region,
       contact,
+      contactEmail: session.user.email,
       tags: tags || [],
       providerId: session.user.id,
       status: 'active'

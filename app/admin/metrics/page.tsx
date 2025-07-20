@@ -1,12 +1,8 @@
-` tags. I will ensure that all parts of the original code are included, the indentation and formatting are preserved, and any ambiguities or conflicts are resolved based on best judgment, while avoiding the forbidden words.
-
-```
-<replit_final_file>
 'use client'
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { getSession } from '@/lib/auth'
+import { requireClientRole } from '@/lib/auth-client'
 
 interface Metrics {
   totalBuyers: number
@@ -31,11 +27,7 @@ export default function MetricsPage() {
 
   const checkAuth = async () => {
     try {
-      const userSession = await getSession()
-      if (!userSession || userSession.role !== 'admin') {
-        router.push('/login')
-        return
-      }
+      const userSession = await requireClientRole(['admin'])
       setSession(userSession)
       await loadMetrics()
     } catch (error) {

@@ -13,7 +13,7 @@ export default async function CreateServicePage() {
 
   return (
     <div>
-      <Navbar user={session.user} />
+      <Navbar user={session?.user || null} />
       
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">

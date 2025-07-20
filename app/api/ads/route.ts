@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
-import { db } from '@/lib/db'
+import { adDb, planUsageDb } from '@/lib/db'
 import { getCurrentMonth, canCreateAd } from '@/lib/plan'
 import { getTenantContext, validateOwnership, TenantSecurityError } from '@/lib/tenant'
 
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Only sellers can view ads' }, { status: 403 })
     }
 
-    const ads = await db.getUserAds(context.userId)
+    const ads = await adDb.findBySeller(context.userId)
 
     return NextResponse.json(ads)
   } catch (error: any) {
@@ -39,29 +39,29 @@ export async function POST(request: NextRequest) {
 
     // Check plan limits
     const currentMonth = getCurrentMonth()
-    const usage = await db.getUserPlanUsage(context.userId, currentMonth)
+    const usage = await planUsageDb.get(context.userId)
 
-    if (!canCreateAd(context.role === 'admin' ? 'Premium' : 'Free', usage.adsCreated)) {
+    if (!canCreateAd('Free', usage.adsCreated)) {
       return NextResponse.json({ 
         error: 'Ad limit reached for your plan',
         usage: usage.adsCreated,
-        limit: context.role === 'admin' ? 'Premium' : 'Free'
+        limit: 'Free'
       }, { status: 403 })
     }
 
-    const ad = await db.createAd({
-      user_id: context.userId,
+    const ad = await adDb.create({
+      sellerId: context.userId,
+      productId: product_id,
+      imageUrl: '',
       title,
       description,
-      product_id,
-      budget,
-      duration,
-      status: 'active',
-      created_at: new Date().toISOString()
+      activeFrom: new Date().toISOString(),
+      activeUntil: new Date(Date.now() + duration * 24 * 60 * 60 * 1000).toISOString(),
+      status: 'active'
     })
 
     // Update usage
-    await db.updatePlanUsage(context.userId, currentMonth, { adsCreated: 1 })
+    await planUsageDb.incrementAds(context.userId)
 
     return NextResponse.json(ad, { status: 201 })
   } catch (error: any) {

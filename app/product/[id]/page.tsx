@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { productDb } from '@/lib/db'
+import { getSession } from '@/lib/auth'
 import AddToCartButton from '@/components/AddToCartButton'
 import ProductRatings from '@/components/ProductRatings'
 import ProductReviewList from '@/components/ProductReviewList'
@@ -16,7 +17,10 @@ export default async function ProductPage({ params }: ProductPageProps) {
     notFound()
   }
 
-  const merchant = await productDb.getMerchantById(product.merchantId)
+  const [merchant, session] = await Promise.all([
+    productDb.getMerchantById(product.merchantId),
+    getSession()
+  ])
 
   const whatsappUrl = merchant?.whatsappNumber 
     ? `https://wa.me/${merchant.whatsappNumber.replace(/[^\d]/g, '')}?text=Hi, I am interested in your listing "${product.name}" on Muvex`
@@ -169,8 +173,18 @@ export default async function ProductPage({ params }: ProductPageProps) {
       {/* Product Ratings & Reviews */}
       {product.listingType === 'fixed' && (
         <div className="mt-12">
-          <ProductRatings productId={product.id} />
-          <ProductReviewList productId={product.id} />
+          <ProductRatings 
+            productId={product.id} 
+            ratings={[]} 
+            averageRating={{ average: 0, count: 0 }} 
+            currentUser={session?.user || null} 
+          />
+          <ProductReviewList 
+            productId={product.id} 
+            initialRatings={[]} 
+            initialComments={[]} 
+            currentUser={session?.user || null} 
+          />
         </div>
       )}
     </div>

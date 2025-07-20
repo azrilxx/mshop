@@ -3,7 +3,7 @@ import Navbar from '@/components/Navbar'
 import { getSession } from '@/lib/auth'
 import { insightDb } from '@/lib/db'
 
-export const mockInsights = [
+const mockInsights = [
   {
     id: '1',
     title: 'The Future of E-commerce in Emerging Markets',
@@ -56,7 +56,7 @@ export default async function InsightDetailPage({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar user={session} />
+      <Navbar user={session?.user || null} />
 
       <div className="max-w-4xl mx-auto px-4 py-8">
         <article className="bg-white rounded-lg shadow-lg overflow-hidden">
@@ -87,7 +87,7 @@ export default async function InsightDetailPage({
                 {mockInsights.filter(post => post.id !== insight.id).slice(0, 2).map((relatedPost) => (
                   <a key={relatedPost.id} href={`/insights/${relatedPost.id}`} className="block p-4 border rounded-lg hover:shadow-md transition-shadow">
                     <h4 className="font-semibold text-gray-900 mb-2">{relatedPost.title}</h4>
-                    <p className="text-sm text-gray-600">{relatedPost.excerpt || relatedPost.content.substring(0, 100) + '...'}</p>
+                    <p className="text-sm text-gray-600">{relatedPost.content.substring(0, 100) + '...'}</p>
                   </a>
                 ))}
               </div>

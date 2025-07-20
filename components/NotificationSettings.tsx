@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useAuth } from '@/lib/hooks'
+import { getClientSession } from '@/lib/auth-client'
 
 interface NotificationPreferences {
   notifyOrder: boolean
@@ -11,7 +11,7 @@ interface NotificationPreferences {
 }
 
 export default function NotificationSettings() {
-  const { user, refreshUser } = useAuth()
+  const [user, setUser] = useState<any>(null)
   const [preferences, setPreferences] = useState<NotificationPreferences>({
     notifyOrder: true,
     notifyStatus: true,
@@ -20,6 +20,14 @@ export default function NotificationSettings() {
   })
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
+
+  useEffect(() => {
+    async function fetchUser() {
+      const session = await getClientSession()
+      setUser(session?.user || null)
+    }
+    fetchUser()
+  }, [])
 
   useEffect(() => {
     if (user) {
@@ -58,7 +66,8 @@ export default function NotificationSettings() {
       }
 
       setMessage('Notification preferences updated successfully')
-      await refreshUser()
+      const session = await getClientSession()
+      setUser(session?.user || null)
     } catch (error: any) {
       setMessage(error.message || 'Failed to update preferences')
     } finally {

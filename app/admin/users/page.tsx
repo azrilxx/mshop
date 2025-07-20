@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { getSession } from '@/lib/auth'
+import { requireClientRole } from '@/lib/auth-client'
 import { userDb, type User } from '@/lib/db'
 
 export default function UsersPage() {
@@ -18,11 +18,7 @@ export default function UsersPage() {
 
   const checkAuth = async () => {
     try {
-      const userSession = await getSession()
-      if (!userSession || userSession.role !== 'admin') {
-        router.push('/login')
-        return
-      }
+      const userSession = await requireClientRole(['admin'])
       setSession(userSession)
       await loadUsers()
     } catch (error) {
@@ -131,7 +127,7 @@ export default function UsersPage() {
                 <tr key={user.id}>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div>
-                      <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                      <div className="text-sm font-medium text-gray-900">{user.fullName || user.email}</div>
                       <div className="text-sm text-gray-500">{user.email}</div>
                     </div>
                   </td>
@@ -152,7 +148,7 @@ export default function UsersPage() {
                     {new Date(user.createdAt).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}
+                    {new Date(user.createdAt).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     {user.status === 'suspended' ? (

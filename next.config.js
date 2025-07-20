@@ -1,5 +1,18 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Configure webpack to handle Node.js modules for Replit DB
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+        crypto: false,
+      }
+    }
+    return config
+  },
   // Multi-tenant domain configuration
   async headers() {
     return [
