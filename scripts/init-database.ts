@@ -1,170 +1,222 @@
 
-import { dbOps } from '../lib/db'
+import { supabase } from '@/lib/supabase'
+import { dbOps } from '@/lib/db'
+import type { User, Product, Storefront } from '@/lib/supabase'
 
-async function initDatabase() {
-  console.log('Initializing database...')
-  
+export async function initDatabase() {
+  console.log('🚀 Initializing MSHOP database with Supabase...')
+
   try {
-    // Create sample users
-    const adminUser = {
-      id: 'admin-1',
-      email: 'admin@muvex.com',
-      name: 'System Admin',
-      role: 'admin' as const,
-      plan: 'premium' as const,
-      tenant_id: 'system',
-      created_at: new Date().toISOString(),
-      status: 'active' as const
+    // Test Supabase connection
+    const { data, error } = await supabase.from('profiles').select('count').limit(1)
+    if (error) {
+      console.error('Supabase connection error:', error)
+      throw error
     }
-    
-    const sellerUser = {
-      id: 'seller-1', 
-      email: 'seller@example.com',
-      name: 'Premium Supplier',
-      role: 'seller' as const,
-      plan: 'premium' as const,
-      tenant_id: 'tenant-1',
-      created_at: new Date().toISOString(),
-      status: 'active' as const
-    }
-    
-    const buyerUser = {
-      id: 'buyer-1',
-      email: 'buyer@example.com', 
-      name: 'Global Buyer',
-      role: 'buyer' as const,
-      plan: 'standard' as const,
-      tenant_id: 'tenant-2',
-      created_at: new Date().toISOString(),
-      status: 'active' as const
+    console.log('✅ Supabase connection successful')
+
+    // Create sample admin user
+    const adminUser: Omit<User, 'created_at'> = {
+      id: 'admin-001',
+      email: 'admin@mshop.com',
+      name: 'Admin User',
+      role: 'admin',
+      plan: 'premium',
+      tenant_id: 'tenant_admin',
+      status: 'active'
     }
 
-    await dbOps.createUser(adminUser)
-    await dbOps.createUser(sellerUser)
-    await dbOps.createUser(buyerUser)
+    // Create sample seller users
+    const seller1: Omit<User, 'created_at'> = {
+      id: 'seller-001',
+      email: 'seller1@mshop.com',
+      name: 'John Seller',
+      role: 'seller',
+      plan: 'standard',
+      tenant_id: 'tenant_seller1',
+      status: 'active'
+    }
+
+    const seller2: Omit<User, 'created_at'> = {
+      id: 'seller-002',
+      email: 'seller2@mshop.com',
+      name: 'Jane Merchant',
+      role: 'seller',
+      plan: 'premium',
+      tenant_id: 'tenant_seller2',
+      status: 'active'
+    }
+
+    // Create sample buyer user
+    const buyer1: Omit<User, 'created_at'> = {
+      id: 'buyer-001',
+      email: 'buyer1@mshop.com',
+      name: 'Bob Buyer',
+      role: 'buyer',
+      plan: 'free',
+      tenant_id: 'tenant_buyer1',
+      status: 'active'
+    }
+
+    // Insert users
+    const users = [adminUser, seller1, seller2, buyer1]
+    for (const user of users) {
+      try {
+        await dbOps.createUser(user)
+        console.log(`✅ Created user: ${user.email}`)
+      } catch (error: any) {
+        if (error.code === '23505') { // Unique constraint violation
+          console.log(`⚠️ User already exists: ${user.email}`)
+        } else {
+          console.error(`❌ Error creating user ${user.email}:`, error)
+        }
+      }
+    }
 
     // Create sample products
-    const products = [
+    const products: Omit<Product, 'created_at' | 'id'>[] = [
       {
-        id: 'product-1',
-        name: 'Industrial Oil Pump',
-        description: 'High-performance centrifugal oil pump suitable for marine and industrial applications',
-        price: 4500,
-        category: 'Oil & Gas',
-        seller_id: 'seller-1',
-        tenant_id: 'tenant-1',
-        status: 'approved' as const,
-        images: ['/api/placeholder/400/300'],
-        tags: ['oil', 'pump', 'industrial', 'marine'],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        name: 'Solar Panel System 5kW',
+        description: 'Complete solar panel system for residential use',
+        price: 5000.00,
+        category: 'Solar Energy',
+        seller_id: 'seller-001',
+        merchant_id: 'seller-001',
+        image_url: '/images/solar-panel-5kw.jpg',
+        status: 'active',
+        stock: 10,
+        tags: ['solar', 'renewable', 'residential']
       },
       {
-        id: 'product-2',
-        name: 'Marine Injection Molding System',
-        description: 'Complete injection molding system designed for marine environment manufacturing',
-        price: 125000,
-        category: 'Manufacturing',
-        seller_id: 'seller-1',
-        tenant_id: 'tenant-1',
-        status: 'approved' as const,
-        images: ['/api/placeholder/400/300'],
-        tags: ['injection', 'molding', 'marine', 'manufacturing'],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        name: 'Industrial Generator 50kW',
+        description: 'Heavy-duty generator for industrial applications',
+        price: 25000.00,
+        category: 'Generators',
+        seller_id: 'seller-001',
+        merchant_id: 'seller-001',
+        image_url: '/images/generator-50kw.jpg',
+        status: 'active',
+        stock: 5,
+        tags: ['generator', 'industrial', 'power']
       },
       {
-        id: 'product-3',
-        name: 'Solar Panel Kit - Commercial Grade',
-        description: 'High-efficiency solar panel system for commercial and industrial applications',
-        price: 15000,
-        category: 'Energy',
-        seller_id: 'seller-1',
-        tenant_id: 'tenant-1',
-        status: 'approved' as const,
-        images: ['/api/placeholder/400/300'],
-        tags: ['solar', 'energy', 'commercial', 'renewable'],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        name: 'LED Street Light 100W',
+        description: 'Energy-efficient LED street lighting solution',
+        price: 150.00,
+        category: 'Lighting',
+        seller_id: 'seller-002',
+        merchant_id: 'seller-002',
+        image_url: '/images/led-street-light.jpg',
+        status: 'active',
+        stock: 50,
+        tags: ['led', 'street', 'lighting', 'efficient']
+      },
+      {
+        name: 'Battery Storage System 10kWh',
+        description: 'Lithium-ion battery storage for renewable energy',
+        price: 8000.00,
+        category: 'Energy Storage',
+        seller_id: 'seller-002',
+        merchant_id: 'seller-002',
+        image_url: '/images/battery-storage.jpg',
+        status: 'active',
+        stock: 8,
+        tags: ['battery', 'storage', 'lithium', 'renewable']
       }
     ]
 
     for (const product of products) {
-      await dbOps.createProduct(product)
+      try {
+        await dbOps.createProduct(product, product.seller_id)
+        console.log(`✅ Created product: ${product.name}`)
+      } catch (error: any) {
+        console.error(`❌ Error creating product ${product.name}:`, error)
+      }
     }
 
-    // Create sample advertisements
-    const advertisements = [
+    // Create sample storefronts
+    const storefronts: Omit<Storefront, 'created_at' | 'updated_at' | 'id'>[] = [
       {
-        id: 'ad-1',
-        title: 'Premium Oil & Gas Equipment',
-        description: 'Discover our range of certified oil and gas equipment for industrial operations',
-        imageUrl: '/api/placeholder/800/400',
-        productId: 'product-1',
-        sellerId: 'seller-1',
-        status: 'active' as const,
-        created_at: new Date().toISOString(),
-        tenant_id: 'tenant-1'
+        merchant_id: 'seller-001',
+        store_name: 'SolarTech Solutions',
+        slug: 'solartech-solutions',
+        bio: 'Leading provider of solar energy solutions for residential and commercial applications.',
+        logo_url: '/images/solartech-logo.png',
+        banner_url: '/images/solartech-banner.jpg',
+        contact_email: 'contact@solartech.com',
+        contact_phone: '+1-555-0123',
+        address: '123 Solar Street, Energy City, EC 12345',
+        status: 'active'
       },
       {
-        id: 'ad-2',
-        title: 'Advanced Manufacturing Solutions',
-        description: 'Transform your manufacturing with our state-of-the-art injection molding systems',
-        imageUrl: '/api/placeholder/800/400',
-        productId: 'product-2',
-        sellerId: 'seller-1',
-        status: 'active' as const,
-        created_at: new Date().toISOString(),
-        tenant_id: 'tenant-1'
+        merchant_id: 'seller-002',
+        store_name: 'PowerMax Industries',
+        slug: 'powermax-industries',
+        bio: 'Industrial power solutions and energy storage systems for modern businesses.',
+        logo_url: '/images/powermax-logo.png',
+        banner_url: '/images/powermax-banner.jpg',
+        contact_email: 'info@powermax.com',
+        contact_phone: '+1-555-0456',
+        address: '456 Industrial Blvd, Power City, PC 67890',
+        status: 'active'
       }
     ]
 
-    for (const ad of advertisements) {
-      await dbOps.createAdvertisement(ad)
+    for (const storefront of storefronts) {
+      try {
+        await dbOps.createStorefront(storefront, storefront.merchant_id)
+        console.log(`✅ Created storefront: ${storefront.store_name}`)
+      } catch (error: any) {
+        if (error.message.includes('already exists')) {
+          console.log(`⚠️ Storefront already exists: ${storefront.store_name}`)
+        } else {
+          console.error(`❌ Error creating storefront ${storefront.store_name}:`, error)
+        }
+      }
     }
 
-    // Create sample insights
-    const insights = [
+    // Create sample subscriptions
+    const subscriptions = [
       {
-        id: 'insight-1',
-        title: 'Global Oil & Gas Market Trends 2024',
-        content: 'The oil and gas industry is experiencing significant transformation with new technologies and sustainability initiatives reshaping the market landscape.',
-        author_id: 'admin-1',
-        category: 'Market Analysis',
-        featured: true,
-        published_at: new Date().toISOString(),
-        tenant_id: 'system'
+        user_id: 'seller-001',
+        plan: 'standard' as const,
+        status: 'active' as const,
+        current_period_start: new Date().toISOString(),
+        current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
       },
       {
-        id: 'insight-2',
-        title: 'Manufacturing Efficiency in Marine Industries',
-        content: 'Marine manufacturing sector is adopting new technologies to improve efficiency and reduce environmental impact.',
-        author_id: 'admin-1',
-        category: 'Industry News',
-        featured: false,
-        published_at: new Date().toISOString(),
-        tenant_id: 'system'
+        user_id: 'seller-002',
+        plan: 'premium' as const,
+        status: 'active' as const,
+        current_period_start: new Date().toISOString(),
+        current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
       }
     ]
 
-    for (const insight of insights) {
-      await dbOps.createInsight(insight)
+    for (const subscription of subscriptions) {
+      try {
+        await dbOps.createSubscription(subscription)
+        console.log(`✅ Created subscription for user: ${subscription.user_id}`)
+      } catch (error: any) {
+        console.error(`❌ Error creating subscription for ${subscription.user_id}:`, error)
+      }
     }
 
-    console.log('✅ Database initialized successfully!')
-    console.log(`Created ${products.length} products`)
-    console.log(`Created ${advertisements.length} advertisements`)
-    console.log(`Created ${insights.length} insights`)
+    console.log('🎉 Database initialization completed successfully!')
     
+    return {
+      success: true,
+      message: 'Database initialized with sample data',
+      stats: {
+        users: users.length,
+        products: products.length,
+        storefronts: storefronts.length,
+        subscriptions: subscriptions.length
+      }
+    }
+
   } catch (error) {
     console.error('❌ Error initializing database:', error)
     throw error
   }
 }
-
-// Run if called directly
-if (require.main === module) {
-  initDatabase().catch(console.error)
-}
-
-export default initDatabase

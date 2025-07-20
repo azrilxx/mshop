@@ -1,18 +1,33 @@
 
-import initDatabase from '../../../scripts/init-database'
+import { NextResponse } from 'next/server'
+import { initDatabase } from '@/scripts/init-database'
 
 export async function POST() {
   try {
-    await initDatabase()
-    return Response.json({ message: 'Database seeded successfully' })
+    console.log('🌱 Starting database seeding...')
+    const result = await initDatabase()
+    
+    return NextResponse.json({
+      success: true,
+      message: 'Database seeded successfully',
+      data: result
+    })
   } catch (error: any) {
     console.error('Seeding error:', error)
-    return Response.json({ error: error.message }, { status: 500 })
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: error.message || 'Failed to seed database',
+        details: error
+      },
+      { status: 500 }
+    )
   }
 }
 
 export async function GET() {
-  return Response.json({ 
-    message: 'Database seeding endpoint. Use POST to seed database.' 
+  return NextResponse.json({
+    message: 'Database seeding endpoint. Use POST to seed the database.',
+    usage: 'POST /api/seed-database'
   })
 }

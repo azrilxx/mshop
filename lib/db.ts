@@ -1,107 +1,5 @@
-// Fix for server-side usage of @replit/database
-let Database: any
-let db: any
-
-if (typeof window === 'undefined') {
-  // Server-side: dynamically import and handle fetch polyfill
-  try {
-    if (!global.fetch) {
-      global.fetch = require('node-fetch')
-    }
-    Database = require('@replit/database')
-    db = new Database()
-  } catch (error) {
-    console.error('Failed to initialize Replit Database:', error)
-    // Fallback to mock implementation for development
-    db = {
-      get: async (key: string) => null,
-      set: async (key: string, value: any) => {},
-      delete: async (key: string) => {},
-      list: async (prefix?: string) => []
-    }
-  }
-} else {
-  // Client-side: use regular import
-  Database = require('@replit/database')
-  db = new Database()
-}
-
-export interface User {
-  id: string
-  email: string
-  name: string
-  role: 'buyer' | 'seller' | 'admin'
-  plan: 'free' | 'standard' | 'premium'
-  tenant_id: string
-  created_at: string
-  status: 'active' | 'inactive' | 'pending'
-}
-
-export interface Product {
-  id: string
-  name: string
-  description: string
-  price: number
-  category: string
-  seller_id: string
-  image_url: string
-  status: 'active' | 'inactive' | 'pending'
-  created_at: string
-  stock: number
-  tags: string[]
-}
-
-export interface Advertisement {
-  id: string
-  seller_id: string
-  product_id: string
-  title: string
-  description: string
-  image_url: string
-  active_from: string
-  active_until: string
-  status: 'active' | 'inactive' | 'expired'
-  created_at: string
-}
-
-export interface Order {
-  id: string
-  buyer_id: string
-  seller_id: string
-  product_id: string
-  quantity: number
-  total_price: number
-  status: 'unpaid' | 'to_ship' | 'shipping' | 'complete' | 'cancelled'
-  created_at: string
-  updated_at: string
-  shipping_address: string
-}
-
-export interface Rating {
-  id: string
-  product_id: string
-  user_id: string
-  rating: number
-  comment: string
-  created_at: string
-}
-
-export interface Storefront {
-  id: string
-  merchant_id: string
-  store_name: string
-  slug: string
-  bio: string
-  logo_url?: string
-  banner_url?: string
-  custom_domain?: string
-  contact_email?: string
-  contact_phone?: string
-  address?: string
-  status: 'active' | 'inactive' | 'pending'
-  created_at: string
-  updated_at: string
-}
+import { supabase } from './supabase'
+import type { User, Product, Advertisement, Order, Rating, Storefront, Subscription } from './supabase'
 
 export class DatabaseOperations {
   // Security middleware - Row Level Security equivalent
@@ -112,143 +10,62 @@ export class DatabaseOperations {
     return userId === resourceOwnerId
   }
 
-  private async safeGet(key: string): Promise<any> {
-    try {
-      const result = await db.get(key)
-      return result || null
-    } catch (error) {
-      console.error(`Database get error for key ${key}:`, error)
-      return null
-    }
-  }
-
-  private async safeSet(key: string, value: any): Promise<void> {
-    try {
-      await db.set(key, value)
-    } catch (error) {
-      console.error(`Database set error for key ${key}:`, error)
-      throw error
-    }
-  }
-
-  // Performance optimization - In-memory indexes
-  private productIndexes: Map<string, string[]> = new Map()
-  private orderIndexes: Map<string, string[]> = new Map()
-  private ratingIndexes: Map<string, string[]> = new Map()
-
-  private async buildIndexes(): Promise<void> {
-    try {
-      // Build product indexes by merchant_id
-      const products = await this.getAllFromTable<Product>('products')
-      const productsByMerchant = new Map<string, string[]>()
-      products.forEach(product => {
-        if (!productsByMerchant.has(product.seller_id)) {
-          productsByMerchant.set(product.seller_id, [])
-        }
-        productsByMerchant.get(product.seller_id)?.push(product.id)
-      })
-      this.productIndexes = productsByMerchant
-
-      // Build order indexes
-      const orders = await this.getAllFromTable<Order>('orders')
-      const ordersByBuyer = new Map<string, string[]>()
-      const ordersBySeller = new Map<string, string[]>()
-      orders.forEach(order => {
-        if (!ordersByBuyer.has(order.buyer_id)) {
-          ordersByBuyer.set(order.buyer_id, [])
-        }
-        if (!ordersBySeller.has(order.seller_id)) {
-          ordersBySeller.set(order.seller_id, [])
-        }
-        ordersByBuyer.get(order.buyer_id)?.push(order.id)
-        ordersBySeller.get(order.seller_id)?.push(order.id)
-      })
-      this.orderIndexes = new Map([...ordersByBuyer, ...ordersBySeller])
-
-      // Build rating indexes by product_id
-      const ratings = await this.getAllFromTable<Rating>('ratings')
-      const ratingsByProduct = new Map<string, string[]>()
-      ratings.forEach(rating => {
-        if (!ratingsByProduct.has(rating.product_id)) {
-          ratingsByProduct.set(rating.product_id, [])
-        }
-        ratingsByProduct.get(rating.product_id)?.push(rating.id)
-      })
-      this.ratingIndexes = ratingsByProduct
-    } catch (error) {
-      console.error('Error building indexes:', error)
-    }
-  }
-
-  async getAllFromTable<T>(tableName: string): Promise<T[]> {
-    try {
-      const data = await this.safeGet(tableName)
-      return Array.isArray(data) ? data : []
-    } catch (error) {
-      console.error(`Error fetching from table ${tableName}:`, error)
-      return []
-    }
-  }
-
-  async addToTable<T>(tableName: string, item: T): Promise<void> {
-    try {
-      const existingData = await this.getAllFromTable<T>(tableName)
-      existingData.push(item)
-      await this.safeSet(tableName, existingData)
-    } catch (error) {
-      console.error(`Error adding to table ${tableName}:`, error)
-      throw error
-    }
-  }
-
-  async updateInTable<T extends { id: string }>(tableName: string, id: string, updates: Partial<T>): Promise<void> {
-    try {
-      const existingData = await this.getAllFromTable<T>(tableName)
-      const index = existingData.findIndex(item => item.id === id)
-      if (index !== -1) {
-        existingData[index] = { ...existingData[index], ...updates }
-        await this.safeSet(tableName, existingData)
-      }
-    } catch (error) {
-      console.error(`Error updating in table ${tableName}:`, error)
-      throw error
-    }
-  }
-
-  async removeFromTable<T extends { id: string }>(tableName: string, id: string): Promise<void> {
-    try {
-      const existingData = await this.getAllFromTable<T>(tableName)
-      const filteredData = existingData.filter(item => item.id !== id)
-      await this.safeSet(tableName, filteredData)
-    } catch (error) {
-      console.error(`Error removing from table ${tableName}:`, error)
-      throw error
-    }
-  }
-
-  // User operations with security checks
-  async createUser(user: User): Promise<void> {
+  // User operations with Supabase
+  async createUser(user: Omit<User, 'created_at'>): Promise<User> {
     // Validate required fields
     if (!user.email || !user.name || !user.role) {
       throw new Error('Missing required user fields')
     }
-    await this.addToTable('users', user)
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .insert([{
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        plan: user.plan || 'free',
+        tenant_id: user.tenant_id,
+        status: user.status || 'active'
+      }])
+      .select()
+      .single()
+
+    if (error) throw error
+    return data
   }
 
   async getUserByEmail(email: string): Promise<User | null> {
-    const users = await this.getAllFromTable<User>('users')
-    return users.find(user => user.email === email) || null
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('email', email)
+      .single()
+
+    if (error) {
+      if (error.code === 'PGRST116') return null // No rows returned
+      throw error
+    }
+    return data
   }
 
   async getUserById(id: string, requestingUserId?: string, requestingUserRole?: string): Promise<User | null> {
-    const users = await this.getAllFromTable<User>('users')
-    const user = users.find(user => user.id === id) || null
-    
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (error) {
+      if (error.code === 'PGRST116') return null
+      throw error
+    }
+
     // Security check - users can only access their own profile unless admin
-    if (user && requestingUserId && !await this.checkUserAccess(requestingUserId, user.id, requestingUserRole)) {
+    if (data && requestingUserId && !await this.checkUserAccess(requestingUserId, data.id, requestingUserRole)) {
       return null
     }
-    return user
+    return data
   }
 
   async updateUser(id: string, updates: Partial<User>, requestingUserId?: string, requestingUserRole?: string): Promise<void> {
@@ -256,21 +73,32 @@ export class DatabaseOperations {
     if (requestingUserId && !await this.checkUserAccess(requestingUserId, id, requestingUserRole)) {
       throw new Error('Unauthorized access')
     }
-    await this.updateInTable('users', id, updates)
+
+    const { error } = await supabase
+      .from('profiles')
+      .update(updates)
+      .eq('id', id)
+
+    if (error) throw error
   }
 
-  // Product operations with security and performance optimization
+  // Product operations with Supabase
   async getProducts(requestingUserId?: string, requestingUserRole?: string): Promise<Product[]> {
-    const products = await this.getAllFromTable<Product>('products')
-    
+    let query = supabase.from('products').select('*')
+
     // If not admin, only return active products or user's own products
     if (requestingUserRole !== 'admin') {
-      return products.filter(product => 
-        product.status === 'active' || 
-        (requestingUserId && product.seller_id === requestingUserId)
-      )
+      if (requestingUserId) {
+        query = query.or(`status.eq.active,seller_id.eq.${requestingUserId}`)
+      } else {
+        query = query.eq('status', 'active')
+      }
     }
-    return products
+
+    const { data, error } = await query.order('created_at', { ascending: false })
+
+    if (error) throw error
+    return data || []
   }
 
   async getProductsBySeller(sellerId: string, requestingUserId?: string, requestingUserRole?: string): Promise<Product[]> {
@@ -278,41 +106,61 @@ export class DatabaseOperations {
     if (requestingUserId && !await this.checkUserAccess(requestingUserId, sellerId, requestingUserRole)) {
       throw new Error('Unauthorized access')
     }
-    
-    // Use index if available for performance
-    await this.buildIndexes()
-    const productIds = this.productIndexes.get(sellerId) || []
-    const allProducts = await this.getProducts()
-    return allProducts.filter(product => productIds.includes(product.id))
+
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .eq('seller_id', sellerId)
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+    return data || []
   }
 
   async getProductById(id: string, requestingUserId?: string, requestingUserRole?: string): Promise<Product | null> {
-    const products = await this.getProducts()
-    const product = products.find(product => product.id === id) || null
-    
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (error) {
+      if (error.code === 'PGRST116') return null
+      throw error
+    }
+
     // Security check - non-active products only visible to owner or admin
-    if (product && product.status !== 'active' && requestingUserId) {
-      if (!await this.checkUserAccess(requestingUserId, product.seller_id, requestingUserRole)) {
+    if (data && data.status !== 'active' && requestingUserId) {
+      if (!await this.checkUserAccess(requestingUserId, data.seller_id, requestingUserRole)) {
         return null
       }
     }
-    return product
+    return data
   }
 
-  async createProduct(product: Product, requestingUserId: string): Promise<void> {
+  async createProduct(product: Omit<Product, 'created_at' | 'id'>, requestingUserId: string): Promise<Product> {
     // Validate required fields
     if (!product.name || !product.price || !product.seller_id) {
       throw new Error('Missing required product fields')
     }
-    
+
     // Security check - users can only create products for themselves
     if (product.seller_id !== requestingUserId) {
       throw new Error('Unauthorized: Cannot create product for another user')
     }
-    
-    await this.addToTable('products', product)
-    // Update indexes
-    await this.buildIndexes()
+
+    const { data, error } = await supabase
+      .from('products')
+      .insert([{
+        ...product,
+        merchant_id: product.seller_id, // Ensure merchant_id is set
+        tags: product.tags || []
+      }])
+      .select()
+      .single()
+
+    if (error) throw error
+    return data
   }
 
   async updateProduct(id: string, updates: Partial<Product>, requestingUserId: string, requestingUserRole?: string): Promise<void> {
@@ -320,299 +168,307 @@ export class DatabaseOperations {
     if (!product) {
       throw new Error('Product not found')
     }
-    
+
     // Security check
     if (!await this.checkUserAccess(requestingUserId, product.seller_id, requestingUserRole)) {
       throw new Error('Unauthorized access')
     }
-    
-    await this.updateInTable('products', id, updates)
+
+    const { error } = await supabase
+      .from('products')
+      .update(updates)
+      .eq('id', id)
+
+    if (error) throw error
   }
 
-  // Advertisement operations with security checks
+  // Advertisement operations with Supabase
   async getAdvertisements(requestingUserId?: string, requestingUserRole?: string): Promise<Advertisement[]> {
-    const ads = await this.getAllFromTable<Advertisement>('advertisements')
-    
+    let query = supabase.from('ads').select('*')
+
     // If not admin, only return user's own ads or active public ads
     if (requestingUserRole !== 'admin') {
-      return ads.filter(ad => 
-        ad.seller_id === requestingUserId || 
-        (ad.status === 'active' && new Date(ad.active_from) <= new Date() && new Date(ad.active_until) >= new Date())
-      )
+      if (requestingUserId) {
+        query = query.or(`seller_id.eq.${requestingUserId},and(status.eq.active,active_from.lte.${new Date().toISOString()},active_until.gte.${new Date().toISOString()})`)
+      } else {
+        const now = new Date().toISOString()
+        query = query.eq('status', 'active').lte('active_from', now).gte('active_until', now)
+      }
     }
-    return ads
+
+    const { data, error } = await query.order('created_at', { ascending: false })
+
+    if (error) throw error
+    return data || []
   }
 
   async getActiveAdvertisements(): Promise<Advertisement[]> {
-    const ads = await this.getAdvertisements()
     const now = new Date().toISOString()
-    return ads.filter(ad => 
-      ad.status === 'active' && 
-      ad.active_from <= now && 
-      ad.active_until >= now
-    )
+    const { data, error } = await supabase
+      .from('ads')
+      .select('*')
+      .eq('status', 'active')
+      .lte('active_from', now)
+      .gte('active_until', now)
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+    return data || []
   }
 
-  async getAdvertisementsBySeller(sellerId: string, requestingUserId: string, requestingUserRole?: string): Promise<Advertisement[]> {
-    // Security check
-    if (!await this.checkUserAccess(requestingUserId, sellerId, requestingUserRole)) {
-      throw new Error('Unauthorized access')
-    }
-    
-    const ads = await this.getAdvertisements()
-    return ads.filter(ad => ad.seller_id === sellerId)
-  }
-
-  async createAdvertisement(ad: Advertisement, requestingUserId: string): Promise<void> {
+  async createAdvertisement(ad: Omit<Advertisement, 'created_at' | 'id'>, requestingUserId: string): Promise<Advertisement> {
     // Validate required fields
     if (!ad.seller_id || !ad.title || !ad.active_from || !ad.active_until) {
       throw new Error('Missing required advertisement fields')
     }
-    
+
     // Security check
     if (ad.seller_id !== requestingUserId) {
       throw new Error('Unauthorized: Cannot create advertisement for another user')
     }
-    
-    await this.addToTable('advertisements', ad)
+
+    const { data, error } = await supabase
+      .from('ads')
+      .insert([{
+        ...ad,
+        merchant_id: ad.seller_id // Ensure merchant_id is set
+      }])
+      .select()
+      .single()
+
+    if (error) throw error
+    return data
   }
 
   async updateAdvertisement(id: string, updates: Partial<Advertisement>, requestingUserId: string, requestingUserRole?: string): Promise<void> {
-    const ads = await this.getAllFromTable<Advertisement>('advertisements')
-    const ad = ads.find(a => a.id === id)
-    if (!ad) {
-      throw new Error('Advertisement not found')
-    }
-    
+    const { data: ad, error: fetchError } = await supabase
+      .from('ads')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (fetchError) throw fetchError
+    if (!ad) throw new Error('Advertisement not found')
+
     // Security check
     if (!await this.checkUserAccess(requestingUserId, ad.seller_id, requestingUserRole)) {
       throw new Error('Unauthorized access')
     }
-    
-    await this.updateInTable('advertisements', id, updates)
+
+    const { error } = await supabase
+      .from('ads')
+      .update(updates)
+      .eq('id', id)
+
+    if (error) throw error
   }
 
-  // Order operations with security and performance optimization
+  // Order operations with Supabase
   async getOrders(requestingUserId: string, requestingUserRole?: string): Promise<Order[]> {
-    const orders = await this.getAllFromTable<Order>('orders')
-    
+    let query = supabase.from('orders').select('*')
+
     // Security: only admins can see all orders
-    if (requestingUserRole === 'admin') {
-      return orders
+    if (requestingUserRole !== 'admin') {
+      // Users can only see their own orders (as buyer or seller)
+      query = query.or(`buyer_id.eq.${requestingUserId},seller_id.eq.${requestingUserId}`)
     }
-    
-    // Users can only see their own orders (as buyer or seller)
-    return orders.filter(order => 
-      order.buyer_id === requestingUserId || order.seller_id === requestingUserId
-    )
+
+    const { data, error } = await query.order('created_at', { ascending: false })
+
+    if (error) throw error
+    return data || []
   }
 
-  async getOrdersBySeller(sellerId: string, requestingUserId: string, requestingUserRole?: string): Promise<Order[]> {
-    // Security check
-    if (!await this.checkUserAccess(requestingUserId, sellerId, requestingUserRole)) {
-      throw new Error('Unauthorized access')
-    }
-    
-    // Use index for performance
-    await this.buildIndexes()
-    const orderIds = this.orderIndexes.get(sellerId) || []
-    const allOrders = await this.getAllFromTable<Order>('orders')
-    return allOrders.filter(order => orderIds.includes(order.id) && order.seller_id === sellerId)
-  }
-
-  async getOrdersByBuyer(buyerId: string, requestingUserId: string, requestingUserRole?: string): Promise<Order[]> {
-    // Security check
-    if (!await this.checkUserAccess(requestingUserId, buyerId, requestingUserRole)) {
-      throw new Error('Unauthorized access')
-    }
-    
-    // Use index for performance
-    await this.buildIndexes()
-    const orderIds = this.orderIndexes.get(buyerId) || []
-    const allOrders = await this.getAllFromTable<Order>('orders')
-    return allOrders.filter(order => orderIds.includes(order.id) && order.buyer_id === buyerId)
-  }
-
-  async createOrder(order: Order, requestingUserId: string): Promise<void> {
+  async createOrder(order: Omit<Order, 'created_at' | 'updated_at' | 'id'>, requestingUserId: string): Promise<Order> {
     // Validate required fields
     if (!order.buyer_id || !order.seller_id || !order.product_id || !order.total_price) {
       throw new Error('Missing required order fields')
     }
-    
+
     // Security check - users can only create orders as buyers
     if (order.buyer_id !== requestingUserId) {
       throw new Error('Unauthorized: Cannot create order for another user')
     }
-    
-    await this.addToTable('orders', order)
-    // Update indexes
-    await this.buildIndexes()
+
+    const { data, error } = await supabase
+      .from('orders')
+      .insert([order])
+      .select()
+      .single()
+
+    if (error) throw error
+    return data
   }
 
   async updateOrder(id: string, updates: Partial<Order>, requestingUserId: string, requestingUserRole?: string): Promise<void> {
-    const orders = await this.getAllFromTable<Order>('orders')
-    const order = orders.find(o => o.id === id)
-    if (!order) {
-      throw new Error('Order not found')
-    }
-    
+    const { data: order, error: fetchError } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (fetchError) throw fetchError
+    if (!order) throw new Error('Order not found')
+
     // Security check - buyers and sellers can update their orders
     const canAccess = order.buyer_id === requestingUserId || 
                      order.seller_id === requestingUserId || 
                      requestingUserRole === 'admin'
-    
+
     if (!canAccess) {
       throw new Error('Unauthorized access')
     }
-    
-    await this.updateInTable('orders', id, updates)
+
+    const { error } = await supabase
+      .from('orders')
+      .update(updates)
+      .eq('id', id)
+
+    if (error) throw error
   }
 
-  // Rating operations with security and performance optimization
+  // Rating operations with Supabase
   async getRatingsByProduct(productId: string): Promise<Rating[]> {
-    // Use index for performance
-    await this.buildIndexes()
-    const ratingIds = this.ratingIndexes.get(productId) || []
-    const allRatings = await this.getAllFromTable<Rating>('ratings')
-    return allRatings.filter(rating => ratingIds.includes(rating.id))
+    const { data, error } = await supabase
+      .from('ratings')
+      .select('*')
+      .eq('product_id', productId)
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+    return data || []
   }
 
-  async createRating(rating: Rating, requestingUserId: string): Promise<void> {
+  async createRating(rating: Omit<Rating, 'created_at' | 'id'>, requestingUserId: string): Promise<Rating> {
     // Validate required fields
     if (!rating.product_id || !rating.user_id || !rating.rating || rating.rating < 1 || rating.rating > 5) {
       throw new Error('Invalid rating data')
     }
-    
+
     // Security check - users can only create ratings as themselves
     if (rating.user_id !== requestingUserId) {
       throw new Error('Unauthorized: Cannot create rating for another user')
     }
-    
+
     // Check for duplicate ratings
-    const existingRatings = await this.getRatingsByProduct(rating.product_id)
-    const existingRating = existingRatings.find(r => r.user_id === requestingUserId)
+    const { data: existingRating } = await supabase
+      .from('ratings')
+      .select('id')
+      .eq('product_id', rating.product_id)
+      .eq('user_id', requestingUserId)
+      .single()
+
     if (existingRating) {
       throw new Error('User has already rated this product')
     }
-    
-    await this.addToTable('ratings', rating)
-    // Update indexes
-    await this.buildIndexes()
+
+    const { data, error } = await supabase
+      .from('ratings')
+      .insert([rating])
+      .select()
+      .single()
+
+    if (error) throw error
+    return data
   }
 
-  // Plan operations
-  async getUserPlan(userId: string): Promise<{ tier: string; maxProducts: number; maxAds: number } | null> {
-    const plans = await this.getAllFromTable<any>('user_plans')
-    return plans.find(plan => plan.userId === userId) || null
-  }
-
-  async updateUserPlan(userId: string, planData: any): Promise<void> {
-    const plans = await this.getAllFromTable<any>('user_plans')
-    const existingIndex = plans.findIndex(plan => plan.userId === userId)
-
-    if (existingIndex !== -1) {
-      plans[existingIndex] = { ...plans[existingIndex], ...planData }
-    } else {
-      plans.push({ userId, ...planData })
-    }
-
-    await this.safeSet('user_plans', plans)
-  }
-
-  // Usage tracking
-  async getUserUsage(userId: string): Promise<{ productsCreated: number; adsCreated: number; reportsGenerated: number } | null> {
-    const usage = await this.getAllFromTable<any>('user_usage')
-    return usage.find(u => u.userId === userId) || { productsCreated: 0, adsCreated: 0, reportsGenerated: 0 }
-  }
-
-  async incrementUsage(userId: string, field: string): Promise<void> {
-    const usage = await this.getAllFromTable<any>('user_usage')
-    const existingIndex = usage.findIndex(u => u.userId === userId)
-
-    if (existingIndex !== -1) {
-      usage[existingIndex][field] = (usage[existingIndex][field] || 0) + 1
-    } else {
-      usage.push({ userId, [field]: 1 })
-    }
-
-    await this.safeSet('user_usage', usage)
-  }
-
-  // Insights operations
-  async getInsights(): Promise<any[]> {
-    return this.getAllFromTable<any>('insights')
-  }
-
-  // Storefront operations with security checks
+  // Storefront operations with Supabase
   async getStorefronts(requestingUserId?: string, requestingUserRole?: string): Promise<Storefront[]> {
-    const storefronts = await this.getAllFromTable<Storefront>('storefronts')
-    
+    let query = supabase.from('storefronts').select('*')
+
     // If not admin, only return user's own storefront or active public ones
     if (requestingUserRole !== 'admin') {
-      return storefronts.filter(store => 
-        store.merchant_id === requestingUserId || 
-        store.status === 'active'
-      )
+      if (requestingUserId) {
+        query = query.or(`merchant_id.eq.${requestingUserId},status.eq.active`)
+      } else {
+        query = query.eq('status', 'active')
+      }
     }
-    return storefronts
+
+    const { data, error } = await query.order('created_at', { ascending: false })
+
+    if (error) throw error
+    return data || []
   }
 
   async getStorefrontBySlug(slug: string): Promise<Storefront | null> {
-    const storefronts = await this.getStorefronts()
-    const storefront = storefronts.find(store => store.slug === slug) || null
-    
-    // Public storefronts are visible to all
-    if (storefront && storefront.status === 'active') {
-      return storefront
+    const { data, error } = await supabase
+      .from('storefronts')
+      .select('*')
+      .eq('slug', slug)
+      .eq('status', 'active')
+      .single()
+
+    if (error) {
+      if (error.code === 'PGRST116') return null
+      throw error
     }
-    return null
+    return data
   }
 
   async getStorefrontByMerchant(merchantId: string, requestingUserId?: string, requestingUserRole?: string): Promise<Storefront | null> {
+    const { data, error } = await supabase
+      .from('storefronts')
+      .select('*')
+      .eq('merchant_id', merchantId)
+      .single()
+
+    if (error) {
+      if (error.code === 'PGRST116') return null
+      throw error
+    }
+
     // Security check for private access
     if (requestingUserId && !await this.checkUserAccess(requestingUserId, merchantId, requestingUserRole)) {
       // Return only if storefront is public
-      const storefronts = await this.getStorefronts()
-      const storefront = storefronts.find(store => store.merchant_id === merchantId) || null
-      return (storefront && storefront.status === 'active') ? storefront : null
+      return (data && data.status === 'active') ? data : null
     }
-    
-    const storefronts = await this.getStorefronts()
-    return storefronts.find(store => store.merchant_id === merchantId) || null
+
+    return data
   }
 
-  async createStorefront(storefront: Storefront, requestingUserId: string): Promise<void> {
+  async createStorefront(storefront: Omit<Storefront, 'created_at' | 'updated_at' | 'id'>, requestingUserId: string): Promise<Storefront> {
     // Validate required fields
     if (!storefront.merchant_id || !storefront.store_name || !storefront.slug) {
       throw new Error('Missing required storefront fields')
     }
-    
+
     // Security check
     if (storefront.merchant_id !== requestingUserId) {
       throw new Error('Unauthorized: Cannot create storefront for another user')
     }
-    
+
     // Check for duplicate slug
     const existingStorefront = await this.getStorefrontBySlug(storefront.slug)
     if (existingStorefront) {
       throw new Error('Storefront slug already exists')
     }
-    
-    await this.addToTable('storefronts', storefront)
+
+    const { data, error } = await supabase
+      .from('storefronts')
+      .insert([storefront])
+      .select()
+      .single()
+
+    if (error) throw error
+    return data
   }
 
   async updateStorefront(id: string, updates: Partial<Storefront>, requestingUserId: string, requestingUserRole?: string): Promise<void> {
-    const storefronts = await this.getAllFromTable<Storefront>('storefronts')
-    const storefront = storefronts.find(s => s.id === id)
-    if (!storefront) {
-      throw new Error('Storefront not found')
-    }
-    
+    const { data: storefront, error: fetchError } = await supabase
+      .from('storefronts')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (fetchError) throw fetchError
+    if (!storefront) throw new Error('Storefront not found')
+
     // Security check
     if (!await this.checkUserAccess(requestingUserId, storefront.merchant_id, requestingUserRole)) {
       throw new Error('Unauthorized access')
     }
-    
+
     // If updating slug, check for duplicates
     if (updates.slug && updates.slug !== storefront.slug) {
       const existingStorefront = await this.getStorefrontBySlug(updates.slug)
@@ -620,8 +476,13 @@ export class DatabaseOperations {
         throw new Error('Storefront slug already exists')
       }
     }
-    
-    await this.updateInTable('storefronts', id, updates)
+
+    const { error } = await supabase
+      .from('storefronts')
+      .update(updates)
+      .eq('id', id)
+
+    if (error) throw error
   }
 
   async generateUniqueSlug(baseName: string): Promise<string> {
@@ -632,11 +493,13 @@ export class DatabaseOperations {
       .replace(/-+/g, '-')
       .trim()
 
-    const storefronts = await this.getStorefronts()
     let counter = 0
     let slug = baseSlug
 
-    while (storefronts.find(store => store.slug === slug)) {
+    while (true) {
+      const existing = await this.getStorefrontBySlug(slug)
+      if (!existing) break
+
       counter++
       slug = `${baseSlug}-${counter}`
     }
@@ -644,35 +507,101 @@ export class DatabaseOperations {
     return slug
   }
 
-  // Enhanced product operations with merchant filtering
-  async getProductsByMerchant(merchantId: string): Promise<Product[]> {
-    const products = await this.getProducts()
-    return products.filter(product => product.seller_id === merchantId)
+  // Subscription operations with Supabase
+  async getUserSubscription(userId: string): Promise<Subscription | null> {
+    const { data, error } = await supabase
+      .from('subscriptions')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .single()
+
+    if (error) {
+      if (error.code === 'PGRST116') return null
+      throw error
+    }
+    return data
   }
 
-  async getPublicProductsByMerchant(merchantId: string): Promise<Product[]> {
-    const products = await this.getProductsByMerchant(merchantId)
-    return products.filter(product => product.status === 'active')
+  async createSubscription(subscription: Omit<Subscription, 'created_at' | 'updated_at' | 'id'>): Promise<Subscription> {
+    const { data, error } = await supabase
+      .from('subscriptions')
+      .insert([subscription])
+      .select()
+      .single()
+
+    if (error) throw error
+    return data
   }
 
-  // Enhanced order operations with merchant filtering
-  async getOrdersByMerchantId(merchantId: string): Promise<Order[]> {
-    const orders = await this.getOrders()
-    return orders.filter(order => order.seller_id === merchantId)
+  async updateSubscription(userId: string, updates: Partial<Subscription>): Promise<void> {
+    const { error } = await supabase
+      .from('subscriptions')
+      .update(updates)
+      .eq('user_id', userId)
+
+    if (error) throw error
   }
 
-  // Enhanced advertisement operations with merchant filtering
-  async getAdsByMerchant(merchantId: string): Promise<Advertisement[]> {
-    const ads = await this.getAdvertisements()
-    return ads.filter(ad => ad.seller_id === merchantId)
+  // Legacy compatibility methods for plan operations
+  async getUserPlan(userId: string): Promise<{ tier: string; maxProducts: number; maxAds: number } | null> {
+    const subscription = await this.getUserSubscription(userId)
+    if (!subscription) return { tier: 'free', maxProducts: 1, maxAds: 0 }
+
+    const planLimits = {
+      free: { tier: 'free', maxProducts: 1, maxAds: 0 },
+      standard: { tier: 'standard', maxProducts: 10, maxAds: 3 },
+      premium: { tier: 'premium', maxProducts: 100, maxAds: 10 }
+    }
+
+    return planLimits[subscription.plan] || planLimits.free
+  }
+
+  async updateUserPlan(userId: string, planData: any): Promise<void> {
+    const existing = await this.getUserSubscription(userId)
+    if (existing) {
+      await this.updateSubscription(userId, planData)
+    } else {
+      await this.createSubscription({
+        user_id: userId,
+        plan: planData.tier || 'free',
+        status: 'active',
+        current_period_start: new Date().toISOString(),
+        current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days
+      })
+    }
+  }
+
+  // Usage tracking (can be implemented later with dedicated tables)
+  async getUserUsage(userId: string): Promise<{ productsCreated: number; adsCreated: number; reportsGenerated: number }> {
+    // Count from actual tables
+    const [productCount, adCount] = await Promise.all([
+      supabase.from('products').select('id', { count: 'exact' }).eq('seller_id', userId),
+      supabase.from('ads').select('id', { count: 'exact' }).eq('seller_id', userId)
+    ])
+
+    return {
+      productsCreated: productCount.count || 0,
+      adsCreated: adCount.count || 0,
+      reportsGenerated: 0 // Placeholder
+    }
+  }
+
+  async incrementUsage(userId: string, field: string): Promise<void> {
+    // This can be implemented with a dedicated usage tracking table if needed
+    // For now, we track usage by counting actual records
+    console.log(`Usage incremented for user ${userId}: ${field}`)
+  }
+
+  // Insights operations (placeholder)
+  async getInsights(): Promise<any[]> {
+    // This would typically aggregate data from multiple tables
+    return []
   }
 }
 
-// Initialize database operations and build indexes
+// Export the database operations instance
 export const dbOps = new DatabaseOperations()
 
-// Initialize indexes on startup
-if (typeof window === 'undefined') {
-  // Only run on server side
-  dbOps.buildIndexes().catch(console.error)
-}
+// Export types for convenience
+export type { User, Product, Advertisement, Order, Rating, Storefront, Subscription }

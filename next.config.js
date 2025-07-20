@@ -1,18 +1,6 @@
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Configure webpack to handle Node.js modules for Replit DB
-  webpack: (config, { isServer }) => {
-    if (!isServer) {
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        fs: false,
-        net: false,
-        tls: false,
-        crypto: false,
-      }
-    }
-    return config
-  },
   // Multi-tenant domain configuration
   async headers() {
     return [
@@ -58,6 +46,11 @@ const nextConfig = {
     NEXT_PUBLIC_APP_URL: process.env.NODE_ENV === 'production' 
       ? 'https://shop.muvonenergy.com' 
       : 'http://localhost:3000',
+  },
+
+  // Image domains for Supabase storage
+  images: {
+    domains: ['gpxhjjhhnijrxoumxsqp.supabase.co'],
   },
 }
 
