@@ -1,4 +1,4 @@
 {
-  "/page": "app/page.js",
-  "/api/seed-database/route": "app/api/seed-database/route.js"
+  "/api/seed-database/route": "app/api/seed-database/route.js",
+  "/page": "app/page.js"
 }
