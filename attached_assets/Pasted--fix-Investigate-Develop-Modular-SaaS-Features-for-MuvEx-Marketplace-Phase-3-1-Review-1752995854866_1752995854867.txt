@@ -1,0 +1,41 @@
+/fix
+
+# Investigate & Develop Modular SaaS Features for MuvEx Marketplace (Phase 3)
+
+1. **Review and Audit Existing Codebase**
+   - Deeply audit current modules: Seller Center, Buyer Journey, Product/Cart/Order/Finance/Reports flows.
+   - Ensure all database tables are in Supabase, remove leftover dummy/static data or image dependencies.
+
+2. **Implement Plan-Based Feature Gating**
+   - Set up three subscription plans: Free, Standard, Premium.
+   - For each plan, define and enforce access rules for:
+     - Number of active product listings
+     - Commission rates
+     - Feature access (ads, marketing, analytics, shipment, mass order tools, etc.)
+   - Gate all seller-side and buyer-side features accordingly (use clear UI state and tooltips).
+   - UI must clearly indicate locked/upgrade-only features for each plan.
+
+3. **Activate & Integrate Ads, Engagement, and Shipment Modules**
+   - Complete ads module (banner, featured listings, campaign management) with admin approval workflow.
+   - Implement abandoned cart tracking and notification logic (backend + basic email trigger).
+   - Add product ratings and comments modules, enforcing moderation and admin controls.
+   - Build shipment management: vendor-defined shipping rules, order status tracking, mass/bulk shipment UI for sellers.
+
+4. **Admin Controls: Merchant and Category Management**
+   - Finish admin UI for merchant verification (approve/reject/ban, view KYC docs, etc.).
+   - Enable admin category controls: add/edit/delete categories, set featured/priority, approve new category requests from sellers.
+   - Add simple performance dashboard for admin (total users, merchants, pending approvals, reports).
+
+5. **Refactor All Relevant UI/UX**
+   - Modularize all new logic as React/Tailwind components.
+   - Ensure seamless integration into both Seller Center and Admin Panel.
+   - UI/UX must follow patterns from Shopee/Alibaba Seller Center (tabbed navigation, status badges, inline notifications, clean responsive layout).
+
+6. **Testing & Validation**
+   - Seed database with demo merchants and products for each plan type.
+   - Write test flows for plan upgrade/downgrade, locked feature scenarios, admin approval cycles, and notification triggers.
+   - Ensure all new features work both desktop and mobile-first.
+
+7. **Documentation**
+   - Update README and system documentation to reflect all new plan-gated features and admin controls.
+   - Document all API endpoints, data models, and integration points for further devs.
