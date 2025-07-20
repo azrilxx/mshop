@@ -134,7 +134,7 @@ CREATE POLICY "Users can update their own profile" ON public.profiles
   FOR UPDATE USING (auth.uid() = id);
 
 CREATE POLICY "Public profiles for active users" ON public.profiles
-  FOR SELECT USING (status = 'active');
+  FOR SELECT USING (status = 'active' AND role IN ('seller', 'buyer'));
 
 -- RLS Policies for products
 CREATE POLICY "Anyone can view active products" ON public.products
