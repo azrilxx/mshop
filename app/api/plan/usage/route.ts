@@ -1,52 +1,33 @@
-
 import { NextRequest, NextResponse } from 'next/server'
-import { planUsageDb } from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
+import { dbOps } from '@/lib/db'
 
 export async function GET(request: NextRequest) {
   try {
     const user = await requireAuth()
-    const usage = await planUsageDb.get(user.id)
-    
-    return NextResponse.json(usage)
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || 'Failed to fetch usage' },
-      { status: 500 }
-    )
-  }
-}
 
-export async function POST(request: NextRequest) {
-  try {
-    const user = await requireAuth()
-    const { action } = await request.json()
+    // Get current usage from database
+    let usage = await dbOps.getUserUsage(user.id)
 
-    if (!['products', 'ads', 'reports'].includes(action)) {
-      return NextResponse.json(
-        { error: 'Invalid action' },
-        { status: 400 }
-      )
+    if (!usage) {
+      usage = {
+        productsCreated: 0,
+        adsCreated: 0,
+        reportsGenerated: 0
+      }
     }
 
-    switch (action) {
-      case 'products':
-        await planUsageDb.incrementProducts(user.id)
-        break
-      case 'ads':
-        await planUsageDb.incrementAds(user.id)
-        break
-      case 'reports':
-        await planUsageDb.incrementReports(user.id)
-        break
-    }
+    // Count actual records to ensure accuracy
+    const userProducts = await dbOps.getProductsBySeller(user.id)
+    const userAds = await dbOps.getAdvertisementsBySeller(user.id)
 
-    const usage = await planUsageDb.get(user.id)
-    return NextResponse.json(usage)
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || 'Failed to update usage' },
-      { status: 500 }
-    )
+    return NextResponse.json({
+      productsCreated: userProducts.length,
+      adsCreated: userAds.length,
+      reportsGenerated: usage.reportsGenerated || 0
+    })
+  } catch (error) {
+    console.error('Usage API error:', error)
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 }

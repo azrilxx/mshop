@@ -1,71 +1,65 @@
+
 import { NextRequest, NextResponse } from 'next/server'
-import { planDb, planUsageDb } from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
+import { dbOps } from '@/lib/db'
+import { getPlanLimits } from '@/lib/plan'
 
 export async function GET(request: NextRequest) {
   try {
     const user = await requireAuth()
-    const plan = await planDb.get(user.id)
     
-    return NextResponse.json(plan)
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || 'Failed to fetch plan' },
-      { status: 500 }
-    )
+    // Get user's current plan from database
+    let userPlan = await dbOps.getUserPlan(user.id)
+    
+    if (!userPlan) {
+      // Initialize with free plan if not exists
+      const freeLimits = getPlanLimits('free')
+      userPlan = {
+        tier: 'free',
+        maxProducts: freeLimits.products,
+        maxAds: freeLimits.ads,
+        maxReports: freeLimits.quotes // Using quotes as reports
+      }
+      await dbOps.updateUserPlan(user.id, userPlan)
+    }
+
+    return NextResponse.json({
+      tier: userPlan.tier,
+      maxProducts: userPlan.maxProducts,
+      maxAds: userPlan.maxAds,
+      maxReports: userPlan.maxReports || 0,
+      hasAdvancedAnalytics: userPlan.tier !== 'free',
+      hasPrioritySupport: userPlan.tier === 'premium'
+    })
+  } catch (error) {
+    console.error('Plan API error:', error)
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
     const user = await requireAuth()
-    const { tier } = await request.json()
+    const body = await request.json()
+    const { tier } = body
 
-    if (!tier || !['Free', 'Standard', 'Premium'].includes(tier)) {
-      return NextResponse.json(
-        { error: 'Invalid tier' },
-        { status: 400 }
-      )
+    if (!['free', 'standard', 'premium'].includes(tier)) {
+      return NextResponse.json({ error: 'Invalid plan tier' }, { status: 400 })
     }
 
-    const plan = await planDb.update(user.id, { tier })
-    
-    // Reset monthly usage when upgrading plan
-    if (tier === 'Standard' || tier === 'Premium') {
-      await planUsageDb.resetForNewPlan(user.id)
-    }
-    
-    return NextResponse.json(plan)
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || 'Failed to update plan' },
-      { status: 500 }
-    )
-  }
-}
-
-export async function PATCH(request: NextRequest) {
-  try {
-    const user = await requireAuth()
-    const { action } = await request.json()
-
-    if (action === 'increment_quota') {
-      await planDb.incrementQuota(user.id)
-    } else if (action === 'decrement_quota') {
-      await planDb.decrementQuota(user.id)
-    } else {
-      return NextResponse.json(
-        { error: 'Invalid action' },
-        { status: 400 }
-      )
+    const limits = getPlanLimits(tier)
+    const planData = {
+      tier,
+      maxProducts: limits.products,
+      maxAds: limits.ads,
+      maxReports: limits.quotes
     }
 
-    const plan = await planDb.get(user.id)
-    return NextResponse.json(plan)
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || 'Failed to update quota' },
-      { status: 500 }
-    )
+    await dbOps.updateUserPlan(user.id, planData)
+
+    return NextResponse.json({ success: true, plan: planData })
+  } catch (error) {
+    console.error('Update plan error:', error)
+    return NextResponse.json({ error: 'Failed to update plan' }, { status: 500 })
   }
 }

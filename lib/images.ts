@@ -1,172 +1,119 @@
-
 import Database from '@replit/database'
 
-// Ensure fetch is available for Replit DB in Node.js environment
-if (typeof globalThis.fetch === 'undefined') {
-  try {
-    const nodeFetch = require('node-fetch')
-    globalThis.fetch = nodeFetch.default || nodeFetch
-    globalThis.Headers = nodeFetch.Headers
-    globalThis.Request = nodeFetch.Request
-    globalThis.Response = nodeFetch.Response
-  } catch (error) {
-    console.warn('node-fetch not available, using fallback')
-    globalThis.fetch = async () => ({ ok: false, json: async () => ({}), text: async () => '' })
-  }
-}
-
-const db = new Database(process.env.REPLIT_DB_URL)
+const db = new Database()
 
 export interface ImageRecord {
   id: string
-  type: 'banner' | 'product' | 'ad' | 'background' | 'category' | 'supplier'
-  tags: string[]
   url: string
-  alt?: string
-  createdAt: string
+  type: 'banner' | 'product' | 'ad' | 'background'
+  tags: string[]
+  description?: string
 }
 
-// Curated industrial/oil & gas/marine images for Muvex
-const defaultImages: Omit<ImageRecord, 'id' | 'createdAt'>[] = [
-  // Oil & Gas Equipment
-  {
-    type: 'product',
-    tags: ['oil', 'gas', 'pipe', 'fitting', 'industrial'],
-    url: 'https://images.unsplash.com/photo-1565611684819-ba5b9e6e2a18?w=400&h=300&fit=crop&q=80',
-    alt: 'Industrial pipe fittings'
-  },
-  {
-    type: 'product',
-    tags: ['pressure', 'vessel', 'tank', 'steel'],
-    url: 'https://images.unsplash.com/photo-1581094288338-2314dddb7ece?w=400&h=300&fit=crop&q=80',
-    alt: 'Pressure vessels'
-  },
-  {
-    type: 'product',
-    tags: ['valve', 'control', 'industrial', 'steel'],
-    url: 'https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?w=400&h=300&fit=crop&q=80',
-    alt: 'Industrial valves'
-  },
-  {
-    type: 'product',
-    tags: ['measurement', 'instrument', 'gauge', 'precision'],
-    url: 'https://images.unsplash.com/photo-1518717758536-85ae29035b6d?w=400&h=300&fit=crop&q=80',
-    alt: 'Measurement instruments'
-  },
-  
-  // Marine & Offshore
-  {
-    type: 'product',
-    tags: ['offshore', 'marine', 'platform', 'drilling'],
-    url: 'https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?w=400&h=300&fit=crop&q=80',
-    alt: 'Offshore drilling platform'
-  },
-  {
-    type: 'product',
-    tags: ['rope', 'access', 'safety', 'equipment'],
-    url: 'https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=400&h=300&fit=crop&q=80',
-    alt: 'Rope access equipment'
-  },
-  
-  // Categories
-  {
-    type: 'category',
-    tags: ['cra', 'alloy', 'corrosion', 'resistant'],
-    url: 'https://images.unsplash.com/photo-1565611684819-ba5b9e6e2a18?w=300&h=200&fit=crop&q=80',
-    alt: 'Corrosion-resistant alloys'
-  },
-  {
-    type: 'category',
-    tags: ['storage', 'tank', 'rental'],
-    url: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=300&h=200&fit=crop&q=80',
-    alt: 'Storage tanks'
-  },
-  
-  // Banners & Backgrounds
-  {
-    type: 'banner',
-    tags: ['industrial', 'facility', 'manufacturing'],
-    url: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=2070&h=800&fit=crop&q=80',
-    alt: 'Industrial facility'
-  },
-  {
-    type: 'background',
-    tags: ['warehouse', 'logistics', 'supply'],
-    url: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=800&h=600&fit=crop&q=80',
-    alt: 'Industrial warehouse'
-  },
-  {
-    type: 'background',
-    tags: ['factory', 'tour', 'manufacturing'],
-    url: 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=800&h=400&fit=crop&q=80',
-    alt: 'Factory tour'
-  }
-]
+// Default fallback images
+const FALLBACK_IMAGES = {
+  product: 'https://images.unsplash.com/photo-1586953208448-b95a79798f07?w=400&h=300&fit=crop',
+  banner: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&h=400&fit=crop',
+  ad: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=600&h=300&fit=crop',
+  background: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&h=600&fit=crop'
+}
 
-export const imageLibrary = {
+class ImageLibrary {
+  private async safeGet(key: string): Promise<any> {
+    try {
+      return await db.get(key) || null
+    } catch (error) {
+      console.error(`Image library get error for key ${key}:`, error)
+      return null
+    }
+  }
+
+  private async safeSet(key: string, value: any): Promise<void> {
+    try {
+      await db.set(key, value)
+    } catch (error) {
+      console.error(`Image library set error for key ${key}:`, error)
+    }
+  }
+
   async initializeImages(): Promise<void> {
     try {
-      const existingImages = await db.get('image_library')
+      const existingImages = await this.safeGet('image_library')
       if (!existingImages || existingImages.length === 0) {
-        const images: ImageRecord[] = defaultImages.map(img => ({
-          ...img,
-          id: `img_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          createdAt: new Date().toISOString()
-        }))
-        
-        await db.set('image_library', images)
-        console.log(`✅ Initialized ${images.length} images in library`)
+        const defaultImages: ImageRecord[] = [
+          {
+            id: 'banner-1',
+            url: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&h=400&fit=crop',
+            type: 'banner',
+            tags: ['business', 'industry', 'corporate'],
+            description: 'Industrial warehouse banner'
+          },
+          {
+            id: 'product-1',
+            url: 'https://images.unsplash.com/photo-1586953208448-b95a79798f07?w=400&h=300&fit=crop',
+            type: 'product',
+            tags: ['equipment', 'industrial', 'machinery'],
+            description: 'Industrial equipment'
+          },
+          {
+            id: 'ad-1',
+            url: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=600&h=300&fit=crop',
+            type: 'ad',
+            tags: ['logistics', 'shipping', 'supply'],
+            description: 'Supply chain advertisement'
+          }
+        ]
+        await this.safeSet('image_library', defaultImages)
       }
     } catch (error) {
       console.error('Failed to initialize image library:', error)
     }
-  },
+  }
 
-  async getImageByTag(tag: string, type?: ImageRecord['type']): Promise<string> {
+  async getImageByTag(tag: string): Promise<string> {
     try {
-      const images = await db.get('image_library') as ImageRecord[] || []
-      const filteredImages = images.filter(img => {
-        const hasTag = img.tags.includes(tag)
-        const hasType = type ? img.type === type : true
-        return hasTag && hasType
-      })
-      
-      if (filteredImages.length > 0) {
-        const randomIndex = Math.floor(Math.random() * filteredImages.length)
-        return filteredImages[randomIndex].url
-      }
-      
-      // Fallback to default image
-      return 'https://images.unsplash.com/photo-1565611684819-ba5b9e6e2a18?w=400&h=300&fit=crop&q=80'
+      const images = await this.safeGet('image_library') || []
+      const matchingImage = images.find((img: ImageRecord) => 
+        img.tags.includes(tag)
+      )
+      return matchingImage?.url || FALLBACK_IMAGES.product
     } catch (error) {
       console.error('Failed to get image by tag:', error)
-      return 'https://images.unsplash.com/photo-1565611684819-ba5b9e6e2a18?w=400&h=300&fit=crop&q=80'
+      return FALLBACK_IMAGES.product
     }
-  },
+  }
 
-  async getImagesByType(type: ImageRecord['type']): Promise<ImageRecord[]> {
+  async getImagesByType(type: 'banner' | 'product' | 'ad' | 'background'): Promise<ImageRecord[]> {
     try {
-      const images = await db.get('image_library') as ImageRecord[] || []
-      return images.filter(img => img.type === type)
+      const images = await this.safeGet('image_library') || []
+      return images.filter((img: ImageRecord) => img.type === type)
     } catch (error) {
       console.error('Failed to get images by type:', error)
       return []
     }
-  },
+  }
 
-  async addImage(image: Omit<ImageRecord, 'id' | 'createdAt'>): Promise<void> {
+  async addImage(image: ImageRecord): Promise<void> {
     try {
-      const images = await db.get('image_library') as ImageRecord[] || []
-      const newImage: ImageRecord = {
-        ...image,
-        id: `img_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        createdAt: new Date().toISOString()
-      }
-      
-      images.push(newImage)
-      await db.set('image_library', images)
+      const images = await this.safeGet('image_library') || []
+      images.push(image)
+      await this.safeSet('image_library', images)
     } catch (error) {
       console.error('Failed to add image:', error)
     }
   }
+
+  getFallbackImage(type: keyof typeof FALLBACK_IMAGES): string {
+    return FALLBACK_IMAGES[type] || FALLBACK_IMAGES.product
+  }
+}
+
+export const imageLibrary = new ImageLibrary()
+
+export async function getImageByTag(tag: string): Promise<string> {
+  return imageLibrary.getImageByTag(tag)
+}
+
+export async function initializeImages(): Promise<void> {
+  return imageLibrary.initializeImages()
 }

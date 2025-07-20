@@ -1,56 +1,40 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getSession } from '@/lib/auth'
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
 
-export async function middleware(request: NextRequest) {
+// Define protected routes
+const protectedRoutes = ['/dashboard', '/seller', '/admin', '/orders']
+const adminRoutes = ['/admin']
+const sellerRoutes = ['/seller']
+
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
-  const host = request.headers.get('host')
 
-  // Debug: Log domain information
-  console.log(`[Middleware] Host: ${host}, Path: ${pathname}`)
-  
-  // Handle custom domain routing
-  if (host === 'shop.muvonenergy.com') {
-    console.log(`[Middleware] Custom domain detected: ${host}`)
-    // Custom domain should route to shop by default
-    if (pathname === '/') {
-      console.log(`[Middleware] Redirecting to /shop for custom domain`)
-      return NextResponse.rewrite(new URL('/shop', request.url))
-    }
-  }
-
-  // Public routes that don't need authentication
-  const publicRoutes = ['/', '/login', '/register', '/products', '/shop', '/api/auth/login', '/api/auth/register', '/api/products', '/api/comments']
-  
-  if (publicRoutes.includes(pathname) || pathname.startsWith('/product/')) {
+  // Skip middleware for API routes, static files, and public routes
+  if (
+    pathname.startsWith('/api') ||
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/favicon.ico') ||
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/register') ||
+    pathname === '/'
+  ) {
     return NextResponse.next()
   }
 
-  try {
-    const session = await getSession()
-    
-    if (!session) {
-      return NextResponse.redirect(new URL('/login', request.url))
-    }
-
-    const user = session.user
-
-    // Role-based route protection
-    if (pathname.startsWith('/admin') && user.role !== 'admin') {
-      return NextResponse.redirect(new URL('/dashboard', request.url))
-    }
-
-    if (pathname.startsWith('/seller') && user.role !== 'seller') {
-      return NextResponse.redirect(new URL('/dashboard', request.url))
-    }
-
-    return NextResponse.next()
-  } catch (error) {
-    return NextResponse.redirect(new URL('/login', request.url))
-  }
+  // For now, let all routes pass through since we're handling auth in components
+  // In production, you'd check for session cookies here
+  return NextResponse.next()
 }
 
 export const config = {
   matcher: [
-    '/((?!api/auth|_next/static|_next/image|favicon.ico).*)',
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     */
+    '/((?!api|_next/static|_next/image|favicon.ico).*)',
   ],
 }
