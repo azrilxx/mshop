@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -194,35 +193,46 @@ export default function SellerDashboard() {
           </div>
         </Link>
 
-        <Link
-          href="/seller/ads/create"
-          className={`block p-6 bg-white rounded-lg shadow hover:shadow-md transition-shadow ${
-            !featureAccess.canCreateAds ? 'opacity-50 cursor-not-allowed' : ''
-          }`}
-          onClick={(e) => {
-            if (!featureAccess.canCreateAds) {
-              e.preventDefault()
-              alert('You have reached your ad limit or ads are not available on your plan. Please upgrade.')
-            }
-          }}
-        >
-          <div className="flex items-center">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-              </svg>
+        {/* Ads Management - Plan-based Access */}
+        <div className={`block p-6 bg-white rounded-lg shadow hover:shadow-md transition-shadow ${
+          !featureAccess.canCreateAds ? 'opacity-60' : ''
+        }`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className={`p-2 rounded-lg ${featureAccess.canCreateAds ? 'bg-red-100' : 'bg-gray-100'}`}>
+                <svg className={`w-6 h-6 ${featureAccess.canCreateAds ? 'text-red-600' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <h3 className="text-lg font-semibold">Manage Ads</h3>
+                <p className="text-gray-600 text-sm">
+                  {featureAccess.canCreateAds 
+                    ? `${ads.length} active ads` 
+                    : 'Upgrade plan to create ads'
+                  }
+                </p>
+              </div>
             </div>
-            <div className="ml-4">
-              <h3 className="text-lg font-semibold">Create Ad</h3>
-              <p className="text-gray-600 text-sm">
-                {featureAccess.canCreateAds 
-                  ? `${featureAccess.remainingAdSlots} slots remaining`
-                  : plan.tier === 'free' ? 'Upgrade to Standard' : 'Limit reached'
-                }
-              </p>
+            <div>
+              {featureAccess.canCreateAds ? (
+                <Link
+                  href="/seller/ads"
+                  className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 text-sm"
+                >
+                  Manage Ads
+                </Link>
+              ) : (
+                <Link
+                  href="/seller/plan"
+                  className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 text-sm"
+                >
+                  Upgrade Plan
+                </Link>
+              )}
             </div>
           </div>
-        </Link>
+        </div>
 
         <Link
           href="/seller/reports"

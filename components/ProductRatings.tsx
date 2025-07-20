@@ -41,7 +41,7 @@ export default function ProductRatings({
         if (response.ok) {
           const orders = await response.json()
           const relevantOrders = orders.filter((order: Order) => 
-            order.productIds.includes(productId) && order.status === 'delivered'
+            order.product_id === productId && order.status === 'complete'
           )
           setUserOrders(relevantOrders)
         }

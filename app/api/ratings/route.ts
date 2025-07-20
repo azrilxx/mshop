@@ -1,5 +1,6 @@
+
 import { NextRequest, NextResponse } from 'next/server'
-import { ratingDb, orderDb } from '@/lib/db'
+import { dbOps } from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
 
 export async function GET(request: NextRequest) {
@@ -14,12 +15,20 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const ratings = await ratingDb.getByProduct(productId)
-    const averageRating = await ratingDb.getAverageRating(productId)
+    const ratings = await dbOps.getRatingsByProduct(productId)
     
+    // Calculate average rating
+    const totalRatings = ratings.length
+    const averageRating = totalRatings > 0 
+      ? ratings.reduce((sum, rating) => sum + rating.rating, 0) / totalRatings
+      : 0
+
     return NextResponse.json({
       ratings,
-      averageRating
+      averageRating: {
+        average: Math.round(averageRating * 10) / 10,
+        count: totalRatings
+      }
     })
   } catch (error: any) {
     return NextResponse.json(
@@ -34,39 +43,37 @@ export async function POST(request: NextRequest) {
     const user = await requireAuth()
     const { productId, orderId, rating, comment } = await request.json()
 
-    if (!productId || !orderId || !rating || rating < 1 || rating > 5) {
+    if (!productId || !rating || rating < 1 || rating > 5) {
       return NextResponse.json(
-        { error: 'Product ID, order ID, and rating (1-5) are required' },
+        { error: 'Product ID and rating (1-5) are required' },
         { status: 400 }
       )
     }
 
-    // Verify the order exists and belongs to the user
-    const order = await orderDb.findById(orderId)
-    if (!order) {
+    if (user.role !== 'buyer') {
       return NextResponse.json(
-        { error: 'Order not found' },
-        { status: 404 }
-      )
-    }
-
-    if (order.buyerId !== user.id) {
-      return NextResponse.json(
-        { error: 'You can only rate products from your own orders' },
+        { error: 'Only buyers can rate products' },
         { status: 403 }
       )
     }
 
-    // Verify the product is in the order
-    if (!order.productIds.includes(productId)) {
+    // Check if user has purchased this product (verify order exists)
+    const orders = await dbOps.getOrdersByBuyer(user.id)
+    const validOrder = orders.find(order => 
+      order.id === orderId && order.product_id === productId && order.status === 'complete'
+    )
+
+    if (!validOrder) {
       return NextResponse.json(
-        { error: 'Product not found in this order' },
-        { status: 400 }
+        { error: 'You can only rate products you have purchased' },
+        { status: 403 }
       )
     }
 
     // Check if rating already exists
-    const existingRating = await ratingDb.get(productId, user.id)
+    const existingRatings = await dbOps.getRatingsByProduct(productId)
+    const existingRating = existingRatings.find(r => r.user_id === user.id)
+    
     if (existingRating) {
       return NextResponse.json(
         { error: 'You have already rated this product' },
@@ -74,13 +81,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const newRating = await ratingDb.create({
-      productId,
-      userId: user.id,
-      orderId,
+    const newRating = {
+      id: `rating-${Date.now()}`,
+      product_id: productId,
+      user_id: user.id,
       rating,
-      comment: comment || ''
-    })
+      comment: comment || '',
+      created_at: new Date().toISOString()
+    }
+
+    await dbOps.createRating(newRating)
 
     return NextResponse.json(newRating, { status: 201 })
   } catch (error: any) {

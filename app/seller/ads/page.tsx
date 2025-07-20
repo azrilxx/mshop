@@ -1,26 +1,15 @@
+
 'use client'
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useFeatureAccess } from '@/lib/hooks'
+import { useUserPlan } from '@/lib/hooks'
 
-interface Advertisement {
-  id: string
-  productId: string
-  imageUrl: string
-  title: string
-  description: string
-  activeFrom: string
-  activeUntil: string
-  status: 'active' | 'inactive' | 'expired'
-  createdAt: string
-}
-
-export default function SellerAdsPage() {
-  const [ads, setAds] = useState<Advertisement[]>([])
+export default function AdsPage() {
+  const { plan, usage, featureAccess, loading: planLoading } = useUserPlan()
+  const [ads, setAds] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const { hasAccess: canCreateAds, loading: planLoading } = useFeatureAccess('createAds')
 
   useEffect(() => {
     fetchAds()
@@ -28,12 +17,13 @@ export default function SellerAdsPage() {
 
   const fetchAds = async () => {
     try {
-      const response = await fetch('/api/ads?sellerId=current')
-      if (!response.ok) {
+      const response = await fetch('/api/ads')
+      if (response.ok) {
+        const data = await response.json()
+        setAds(data)
+      } else {
         throw new Error('Failed to fetch ads')
       }
-      const data = await response.json()
-      setAds(data)
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -41,67 +31,53 @@ export default function SellerAdsPage() {
     }
   }
 
-  const updateAdStatus = async (adId: string, status: 'active' | 'inactive') => {
+  const handleDeactivateAd = async (adId: string) => {
     try {
-      const response = await fetch('/api/ads', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ adId, status }),
+      const response = await fetch(`/api/ads?id=${adId}`, {
+        method: 'DELETE'
       })
 
-      if (!response.ok) {
-        throw new Error('Failed to update ad status')
+      if (response.ok) {
+        setAds(ads.map(ad => 
+          ad.id === adId ? { ...ad, status: 'inactive' } : ad
+        ))
+      } else {
+        const data = await response.json()
+        alert(data.error || 'Failed to deactivate ad')
       }
-
-      // Update local state
-      setAds(ads.map(ad => 
-        ad.id === adId ? { ...ad, status } : ad
-      ))
     } catch (err: any) {
-      setError(err.message)
+      alert(err.message)
     }
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active': return 'bg-green-100 text-green-800'
-      case 'inactive': return 'bg-gray-100 text-gray-800'
-      case 'expired': return 'bg-red-100 text-red-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  if (loading || planLoading) {
+  if (planLoading || loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-600">Loading ads...</div>
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center">Loading...</div>
       </div>
     )
   }
 
-  if (!canCreateAds) {
+  // Check if user can access ads
+  if (!featureAccess.canCreateAds && !ads.length) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-          <div className="px-4 py-6 sm:px-0">
-            <div className="mb-6">
-              <Link href="/seller" className="text-blue-600 hover:text-blue-800">
-                ← Back to Seller Center
-              </Link>
-            </div>
-            <div className="text-center py-12">
-              <svg className="h-16 w-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-              </svg>
-              <h2 className="text-2xl font-semibold text-gray-900 mb-2">Advertisements Not Available</h2>
-              <p className="text-gray-600 mb-4">
-                Upgrade to Standard or Premium plan to access advertisement features.
-              </p>
+      <div className="container mx-auto px-4 py-8">
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+          <div className="flex items-center">
+            <svg className="w-5 h-5 text-yellow-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+            <h3 className="text-lg font-medium text-yellow-800">Advertisements Not Available</h3>
+          </div>
+          <div className="mt-2">
+            <p className="text-yellow-700">
+              Your {plan?.tier || 'Free'} plan doesn't include advertisement features. 
+              Upgrade to Standard or Premium to create and manage ads.
+            </p>
+            <div className="mt-4">
               <Link
                 href="/seller/plan"
-                className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700"
+                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
               >
                 Upgrade Plan
               </Link>
@@ -113,101 +89,124 @@ export default function SellerAdsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          <div className="mb-6">
-            <Link href="/seller" className="text-blue-600 hover:text-blue-800">
-              ← Back to Seller Center
-            </Link>
-          </div>
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">My Advertisements</h1>
+          <p className="text-gray-600 mt-2">Manage your product advertisements</p>
+        </div>
+        {featureAccess.canCreateAds && featureAccess.hasAdSlotsAvailable && (
+          <Link
+            href="/seller/ads/create"
+            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+          >
+            Create New Ad
+          </Link>
+        )}
+      </div>
 
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">My Advertisements</h1>
-              <p className="text-sm text-gray-600">
-                Ad Slots: 0/3 used
-              </p>
+      {/* Plan Usage Display */}
+      <div className="bg-white rounded-lg shadow p-6 mb-6">
+        <h3 className="text-lg font-medium text-gray-900 mb-4">Advertisement Usage</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="text-center">
+            <div className="text-2xl font-bold text-blue-600">
+              {usage?.adsCreated || 0}
             </div>
-            {canCreateAds ? (
+            <div className="text-sm text-gray-600">Ads Created</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-green-600">
+              {ads.filter(ad => ad.status === 'active').length}
+            </div>
+            <div className="text-sm text-gray-600">Active Ads</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-gray-600">
+              {featureAccess.remainingAdSlots === 999 ? '∞' : featureAccess.remainingAdSlots}
+            </div>
+            <div className="text-sm text-gray-600">Slots Available</div>
+          </div>
+        </div>
+      </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+          <p className="text-red-700">{error}</p>
+        </div>
+      )}
+
+      {/* Ads List */}
+      {ads.length === 0 ? (
+        <div className="text-center py-12">
+          <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+          </svg>
+          <h3 className="mt-2 text-sm font-medium text-gray-900">No advertisements</h3>
+          <p className="mt-1 text-sm text-gray-500">Get started by creating your first ad.</p>
+          {featureAccess.canCreateAds && (
+            <div className="mt-6">
               <Link
                 href="/seller/ads/create"
-                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+                className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
               >
-                Create New Ad
+                Create Advertisement
               </Link>
-            ) : (
-              <button
-                disabled
-                className="bg-gray-400 text-white px-4 py-2 rounded-md cursor-not-allowed"
-              >
-                No Ad Slots Available
-              </button>
-            )}
-          </div>
-
-          {error && (
-            <div className="mb-6 bg-red-50 border border-red-200 rounded-md p-4">
-              <div className="text-red-700">{error}</div>
-            </div>
-          )}
-
-          {ads.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-gray-500">No advertisements yet. Create your first ad!</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {ads.map((ad) => (
-                <div key={ad.id} className="bg-white overflow-hidden shadow rounded-lg">
-                  <div className="aspect-w-16 aspect-h-9">
-                    <img
-                      src={ad.imageUrl}
-                      alt={ad.title}
-                      className="w-full h-48 object-cover"
-                    />
-                  </div>
-                  
-                  <div className="p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-lg font-medium text-gray-900">{ad.title}</h3>
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(ad.status)}`}>
-                        {ad.status}
-                      </span>
-                    </div>
-                    
-                    <p className="text-sm text-gray-600 mb-3">{ad.description}</p>
-                    
-                    <div className="text-xs text-gray-500 mb-3">
-                      <p>Active: {new Date(ad.activeFrom).toLocaleDateString()} - {new Date(ad.activeUntil).toLocaleDateString()}</p>
-                    </div>
-                    
-                    <div className="flex space-x-2">
-                      {ad.status === 'active' && (
-                        <button
-                          onClick={() => updateAdStatus(ad.id, 'inactive')}
-                          className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded hover:bg-red-200"
-                        >
-                          Deactivate
-                        </button>
-                      )}
-                      
-                      {ad.status === 'inactive' && new Date(ad.activeUntil) > new Date() && (
-                        <button
-                          onClick={() => updateAdStatus(ad.id, 'active')}
-                          className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200"
-                        >
-                          Activate
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
             </div>
           )}
         </div>
-      </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {ads.map(ad => (
+            <div key={ad.id} className="bg-white rounded-lg shadow overflow-hidden">
+              <div className="aspect-video bg-gray-100">
+                <img
+                  src={ad.image_url || '/placeholder-ad.jpg'}
+                  alt={ad.title}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-lg font-medium text-gray-900 truncate">
+                    {ad.title}
+                  </h3>
+                  <span className={`px-2 py-1 text-xs rounded-full ${
+                    ad.status === 'active' 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {ad.status}
+                  </span>
+                </div>
+                <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+                  {ad.description}
+                </p>
+                <div className="text-xs text-gray-500 mb-3">
+                  <div>Active: {new Date(ad.active_from).toLocaleDateString()}</div>
+                  <div>Until: {new Date(ad.active_until).toLocaleDateString()}</div>
+                </div>
+                <div className="flex space-x-2">
+                  {ad.status === 'active' && (
+                    <button
+                      onClick={() => handleDeactivateAd(ad.id)}
+                      className="flex-1 bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700"
+                    >
+                      Deactivate
+                    </button>
+                  )}
+                  <Link
+                    href={`/product/${ad.product_id}`}
+                    className="flex-1 bg-gray-600 text-white px-3 py-1 rounded text-sm hover:bg-gray-700 text-center"
+                  >
+                    View Product
+                  </Link>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
