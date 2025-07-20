@@ -1,14 +1,11 @@
-import { NextResponse } from 'next/server'
+
 import { deleteSession } from '@/lib/auth'
 
 export async function POST() {
   try {
     await deleteSession()
-    return NextResponse.json({ message: 'Logout successful' }, { status: 200 })
+    return Response.json({ success: true })
   } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || 'Logout failed' },
-      { status: 500 }
-    )
+    return Response.json({ error: error.message }, { status: 500 })
   }
 }

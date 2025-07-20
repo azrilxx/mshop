@@ -1,44 +1,63 @@
-
 import Link from 'next/link'
-import { landingDb } from '@/lib/landingDb'
-import { seedLandingData } from '@/scripts/seed-landing-data'
+import { dbOps, Product, Advertisement } from '@/lib/db'
 import { imageLibrary } from '@/lib/images'
 import SearchBar from '@/components/SearchBar'
 
 export default async function LandingPage() {
-  // Seed data if not exists
-  await seedLandingData()
-  
   // Initialize image library
   await imageLibrary.initializeImages()
 
-  // Fetch all landing data
-  const [heroSection, ctaSection, categories, featuredProducts, bannerImage] = await Promise.all([
-    landingDb.getHeroSection(),
-    landingDb.getCTASection(),
-    landingDb.getCategories(),
-    landingDb.getFeaturedProducts(),
-    imageLibrary.getImageByTag('industrial', 'banner')
+  // Fetch landing data from Replit Database
+  const [
+    featuredProducts,
+    advertisements,
+    insights
+  ] = await Promise.all([
+    dbOps.getProducts().then(products => products.filter(p => p.status === 'approved').slice(0, 8)),
+    dbOps.getAdvertisements().then(ads => ads.filter(a => a.status === 'active').slice(0, 4)),
+    dbOps.getInsights().then(insights => insights.slice(0, 3))
   ])
+
+  // Mock hero section for now
+  const heroSection = {
+    title: "The leading B2B ecommerce platform for global trade",
+    backgroundImage: await imageLibrary.getImageByTag('industrial', 'banner') || '/placeholder-hero.jpg'
+  }
+
+  // Mock testimonials
+  const testimonials = [
+    {
+      id: '1',
+      name: 'Sarah Johnson',
+      company: 'TechCorp Industries',
+      message: 'Muvex has transformed our procurement process. We\'ve found reliable suppliers and reduced costs by 30%.'
+    },
+    {
+      id: '2', 
+      name: 'Michael Chen',
+      company: 'Global Manufacturing',
+      message: 'The platform\'s AI sourcing agent helped us discover suppliers we never would have found otherwise.'
+    }
+  ]
 
   return (
     <div className="min-h-screen bg-white">
-      
+
 
       {/* Hero Banner - Alibaba Style */}
       <section 
         className="relative h-80 bg-cover bg-center"
         style={{ 
-          backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url(${heroSection?.backgroundImage || bannerImage})` 
+          backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url(${heroSection?.backgroundImage})` 
         }}
       >
         <div className="relative max-w-7xl mx-auto px-4 h-full flex flex-col justify-center">
           <div className="mb-8">
             <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 leading-tight max-w-4xl">
-              The leading B2B ecommerce platform for global trade
+              {heroSection?.title}
             </h1>
           </div>
-          
+
           {/* Alibaba-style Search Bar */}
           <div className="w-full max-w-4xl">
             <form className="relative">
@@ -218,7 +237,7 @@ export default async function LandingPage() {
         <div className="max-w-7xl mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-12 text-gray-900">Shop by Category</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {categories.map((category) => (
+            {/* categories.map((category) => (
               <Link 
                 key={category.id}
                 href={`/shop?category=${category.id}`}
@@ -237,7 +256,7 @@ export default async function LandingPage() {
                   </h3>
                 </div>
               </Link>
-            ))}
+            )) */}
           </div>
         </div>
       </section>
@@ -298,16 +317,16 @@ export default async function LandingPage() {
       <section className="py-20 bg-gradient-to-r from-orange-500 to-red-500">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <h2 className="text-4xl font-bold text-white mb-4">
-            {ctaSection?.heading || 'Start Selling on Muvex'}
+            Start Selling on Muvex
           </h2>
           <p className="text-xl text-orange-100 mb-8">
-            {ctaSection?.subheading || 'List your inventory and reach verified buyers today.'}
+            List your inventory and reach verified buyers today.
           </p>
           <Link 
-            href={ctaSection?.link || '/register'}
+            href={'/register'}
             className="bg-white text-orange-500 px-12 py-4 rounded-lg text-xl font-bold hover:bg-gray-100 inline-block transition-colors shadow-lg"
           >
-            {ctaSection?.buttonLabel || 'Join as Seller'}
+            Join as Seller
           </Link>
         </div>
       </section>

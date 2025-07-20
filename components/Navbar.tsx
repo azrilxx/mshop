@@ -4,15 +4,10 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import LoginModal from './LoginModal'
-
-interface User {
-  id: string
-  email: string
-  role: string
-}
+import { User } from '@/lib/db'
 
 interface NavbarProps {
-  user: User | null
+  user?: User | null
 }
 
 export default function Navbar({ user }: NavbarProps) {

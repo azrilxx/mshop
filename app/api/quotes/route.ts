@@ -1,79 +1,56 @@
+import { NextRequest } from 'next/server'
+import { withAuth } from '@/lib/auth'
+import { dbOps, Quote } from '@/lib/db'
 
-import { NextResponse } from 'next/server'
-import { getSession } from '@/lib/auth'
-import { rfqDb, productDb, userDb } from '@/lib/db'
-import { emailService } from '@/lib/mailchimp'
-
-export async function POST(request: Request) {
+export const GET = withAuth(async (request: NextRequest, user) => {
   try {
-    const session = await getSession()
-    const { productId, name, email, quantity, region, message } = await request.json()
+    const quotes = await dbOps.getQuotes(user.tenant_id)
 
-    // Validate required fields
-    if (!productId || !name || !email || !quantity || !region || !message) {
-      return NextResponse.json(
-        { error: 'All fields are required' },
-        { status: 400 }
-      )
+    // Filter quotes based on user role
+    let userQuotes: Quote[]
+    if (user.role === 'admin') {
+      userQuotes = quotes
+    } else if (user.role === 'seller') {
+      userQuotes = quotes.filter(q => q.seller_id === user.id)
+    } else {
+      userQuotes = quotes.filter(q => q.buyer_id === user.id)
     }
 
-    // Get product to verify it exists and get seller info
-    const product = await productDb.findById(productId)
-    if (!product) {
-      return NextResponse.json(
-        { error: 'Product not found' },
-        { status: 404 }
-      )
-    }
-
-    // Get seller info for notifications
-    const seller = await userDb.findById(product.merchantId)
-    if (!seller) {
-      return NextResponse.json(
-        { error: 'Seller not found' },
-        { status: 404 }
-      )
-    }
-
-    // Create RFQ
-    const rfq = await rfqDb.create({
-      productId,
-      buyerId: session?.user?.id || null,
-      name,
-      email,
-      quantity: parseInt(quantity),
-      region,
-      message
-    })
-
-    // Send notification to seller
-    try {
-      if (seller.whatsappNumber) {
-        console.log('WhatsApp notification available for seller:', seller.whatsappNumber)
-      }
-
-      // Email notification - TODO: Implement proper email service integration
-      if (seller.email && seller.notifyOrder) {
-        console.log(`Email notification would be sent to ${seller.email} for quote request on ${product.name}`)
-        // await emailService.sendTransactionalEmail(...)
-      }
-    } catch (notificationError) {
-      console.error('Failed to send notification:', notificationError)
-      // Don't fail the RFQ submission if notification fails
-    }
-
-    return NextResponse.json({ 
-      success: true, 
-      rfqId: rfq.id,
-      whatsappAvailable: !!seller.whatsappNumber,
-      whatsappNumber: seller.whatsappNumber 
-    })
-
-  } catch (error) {
-    console.error('RFQ submission error:', error)
-    return NextResponse.json(
-      { error: 'Failed to submit quote request' },
-      { status: 500 }
-    )
+    return Response.json({ quotes: userQuotes })
+  } catch (error: any) {
+    return Response.json({ error: error.message }, { status: 500 })
   }
-}
+})
+
+export const POST = withAuth(async (request: NextRequest, user) => {
+  try {
+    if (user.role !== 'buyer' && user.role !== 'admin') {
+      return Response.json({ error: 'Only buyers can request quotes' }, { status: 403 })
+    }
+
+    const quoteData = await request.json()
+
+    // Get product to find seller
+    const product = await dbOps.getProductById(quoteData.product_id)
+    if (!product) {
+      return Response.json({ error: 'Product not found' }, { status: 404 })
+    }
+
+    const quote: Quote = {
+      id: `quote-${Date.now()}`,
+      product_id: quoteData.product_id,
+      buyer_id: user.id,
+      seller_id: product.seller_id,
+      quantity: quoteData.quantity,
+      message: quoteData.message,
+      status: 'pending',
+      created_at: new Date().toISOString(),
+      tenant_id: user.tenant_id || 'default'
+    }
+
+    const createdQuote = await dbOps.createQuote(quote)
+    return Response.json({ quote: createdQuote })
+  } catch (error: any) {
+    return Response.json({ error: error.message }, { status: 500 })
+  }
+})
